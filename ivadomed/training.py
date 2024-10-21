@@ -24,8 +24,6 @@ from ivadomed.loader import utils as imed_loader_utils
 from ivadomed.loader.balanced_sampler import BalancedSampler
 from ivadomed.keywords import ModelParamsKW, ConfigKW, BalanceSamplesKW, TrainingParamsKW, MetadataKW, WandbKW
 
-cudnn.benchmark = True
-
 
 def train(model_params, dataset_train, dataset_val, training_params, path_output, device, wandb_params=None,
           cuda_available=True, metric_fns=None, n_gif=0, resume_training=False, debugging=False):

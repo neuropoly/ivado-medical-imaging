@@ -25,8 +25,6 @@ from ivadomed.keywords import ConfigKW, ModelParamsKW, LoaderParamsKW, ContrastP
 from loguru import logger
 from pathlib import Path
 
-cudnn.benchmark = True
-
 # List of not-default available models i.e. different from Unet
 MODEL_LIST = ['Modified3DUNet', 'HeMISUnet', 'FiLMedUnet', 'resnet18', 'densenet121', 'Countception']
 
@@ -373,7 +371,9 @@ def run_command(context, n_gif=0, thr_increment=None, resume_training=False, no_
     create_dataset_and_ivadomed_version_log(context)
 
     cuda_available, device = imed_utils.define_device(context[ConfigKW.GPU_IDS][0])
-
+    imed_utils.set_global_seed(context.get(ConfigKW.SPLIT_DATASET).get(SplitDatasetKW.RANDOM_SEED),
+                               context.get(ConfigKW.SPLIT_DATASET).get(SplitDatasetKW.CONTROL_RANDOMNESS, False))
+    
     # BACKWARDS COMPATIBILITY: If bids_path is string, assign to list - Do this here so it propagates to all functions
     context[ConfigKW.LOADER_PARAMETERS][LoaderParamsKW.PATH_DATA] =\
         imed_utils.format_path_data(context[ConfigKW.LOADER_PARAMETERS][LoaderParamsKW.PATH_DATA])

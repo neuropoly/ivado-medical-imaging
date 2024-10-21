@@ -64,7 +64,7 @@ class SplitDatasetKW:
     TRAIN_FRACTION: str = "train_fraction"
     TEST_FRACTION: str = "test_fraction"
     BALANCE: str = "balance"
-
+    CONTROL_RANDOMNESS: str = "control_randomness"
 
 @dataclass
 class DataTestingKW:

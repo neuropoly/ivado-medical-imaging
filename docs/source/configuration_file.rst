@@ -804,6 +804,26 @@ Split Dataset
 
     {
         "$schema": "http://json-schema.org/draft-04/schema#",
+        "title": "control_randomness",
+        "description": [
+            "Indicates if some sources of randomness in the experiments should be reduced by setting random_seed for numpy and torch. Default: ``False``.",
+        "type": "boolean"
+    }
+
+
+.. code-block:: JSON
+
+    {
+        "split_dataset": {
+            "control_randomness": true
+        }
+    }
+
+
+.. jsonschema::
+
+    {
+        "$schema": "http://json-schema.org/draft-04/schema#",
         "title": "split_method",
         "$$description": [
             "Metadata contained in a BIDS tabular (TSV) file or a BIDS sidecar JSON file on which the files are shuffled\n",

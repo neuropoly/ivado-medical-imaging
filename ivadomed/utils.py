@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import subprocess
 import hashlib
@@ -6,6 +7,7 @@ import datetime
 import platform
 
 import numpy as np
+import torch
 import wandb
 from enum import Enum
 from loguru import logger
@@ -34,6 +36,27 @@ class Metavar(Enum):
         return self.value
 
 
+def set_global_seed(seed: int, control_randomness: bool) -> None:
+    """
+    Set random seed for modules and reduce some sources of randomness
+    in the experiments. 
+    
+    Args:
+        seed (int): Global seed
+        control_randomness (bool): If True, set seed for different sources of randomness
+        
+    """
+    # TODO: profile if module level torch import reduces speed ref:#793
+    random.seed(seed)
+    torch.backends.cudnn.benchmark = True
+    
+    if control_randomness:
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.benchmark = False
+
+        
 def initialize_wandb(wandb_params):
     """Initializes WandB and based upon the parameters sets it up or disables it for experimental tracking
     
