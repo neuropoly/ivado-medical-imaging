@@ -2,6 +2,7 @@
 **BIDS (1)**,|yes|,|no|,|no|,|no|,|no|,|no|,|no|,|yes|,|no|,|no|
 **DL base library**,PyTorch,PyTorch,"PyTorch, TF",PyTorch,TF/Keras,TF,TF/Keras,PyTorch,TF/Keras,TF
 **Task (2)**,"Class, Seg, Detect","Seg, Class","Class, Gen, Seg",Detect,"Class, Seg, Clust, Reg","Class, Seg, Reg",Seg,"Class, Seg",Seg,Reg
+**Actively Maintained**,|yes|, |yes|, |no|, |no|, |yes|, |no|, |yes|, |no|, |no|, |no|
 **Data dimension**,"2D, 3D","2D, 3D","2D, 3D","2D, 3D","2D, 3D",3D,"2D, 3D",3D,"2D, 3D","2D, 3D"
 **Multichannel**,|yes| ,|yes| ,|no| ,|no| ,|no| ,|no| ,|no| ,|no| ,|no|, |yes|
 **Multilabel**,|yes| ,|yes| ,|no| ,|no| ,|yes| ,|yes| ,|yes| ,|no| ,|no| ,|yes|
