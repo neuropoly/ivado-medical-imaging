@@ -1,4 +1,7 @@
-  
+
+> [!WARNING]  
+> `ivadomed` is no more maintained. New models integrated in our 3rd party software (SCT, AxonDeepSeg, etc.) are now trained using MONAI and/or nnUnet.
+
 ![ivadomed Overview](https://raw.githubusercontent.com/ivadomed/doc-figures/main/index/overview_title.png)
 
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.02868/status.svg)](https://doi.org/10.21105/joss.02868)
