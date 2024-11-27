@@ -246,14 +246,11 @@ def run_inference(test_loader, model, model_params, testing_params, ofolder, cud
 
                     output_nii_shape = output_nii.get_fdata().shape
                     if len(output_nii_shape) == 4 and output_nii_shape[-1] > 1 and ofolder:
-                        logger.warning('No color labels saved due to a temporary issue. For more details see:'
-                                       'https://github.com/ivadomed/ivadomed/issues/720')
-                        # TODO: put back the code below. See #720
-                        # imed_visualize.save_color_labels(np.stack(pred_tmp_lst, -1),
-                        #                              False,
-                        #                              fname_ref,
-                        #                              fname_pred.split(".nii.gz")[0] + '_color.nii.gz',
-                        #                              imed_utils.AXIS_DCT[testing_params['slice_axis']])
+                        imed_visualize.save_color_labels(np.stack(pred_tmp_lst, -1),
+                                                     False,
+                                                     fname_ref,
+                                                     fname_pred.split(".nii.gz")[0] + '_color.nii.gz',
+                                                     imed_utils.AXIS_DCT[testing_params['slice_axis']])
 
                     # For Microscopy PNG/TIF files (TODO: implement OMETIFF behavior)
                     extension = imed_loader_utils.get_file_extension(fname_ref)
@@ -308,12 +305,11 @@ def run_inference(test_loader, model, model_params, testing_params, ofolder, cud
                     if pred_undo.shape[0] > 1 and ofolder:
                         logger.warning('No color labels saved due to a temporary issue. For more details see:'
                                        'https://github.com/ivadomed/ivadomed/issues/720')
-                        # TODO: put back the code below. See #720
-                        # imed_visualize.save_color_labels(pred_undo,
-                        #                              False,
-                        #                              batch[MetadataKW.INPUT_METADATA][smp_idx][0]['input_filenames'],
-                        #                              fname_pred.split(".nii.gz")[0] + '_color.nii.gz',
-                        #                              slice_axis)
+                        imed_visualize.save_color_labels(pred_undo,
+                                                     False,
+                                                     batch[MetadataKW.INPUT_METADATA][smp_idx][0]['input_filenames'],
+                                                     fname_pred.split(".nii.gz")[0] + '_color.nii.gz',
+                                                     slice_axis)
 
     if ModelParamsKW.FILM_LAYERS in model_params and any(model_params[ModelParamsKW.FILM_LAYERS]):
         save_film_params(gammas_dict, betas_dict, metadata_values_lst, model_params[ModelParamsKW.DEPTH],

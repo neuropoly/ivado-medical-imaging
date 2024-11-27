@@ -100,7 +100,8 @@ def save_color_labels(gt_data, binarize, gt_filename, output_filename, slice_axi
     multi_labeled_pred = multi_labeled_pred.copy().astype('u1').view(dtype=rgb_dtype).reshape((h, w, d))
 
     imed_inference.pred_to_nib([multi_labeled_pred], [], gt_filename,
-                output_filename, slice_axis=slice_axis, kernel_dim='3d', bin_thr=-1, discard_noise=False)
+                output_filename, slice_axis=slice_axis, kernel_dim='3d', bin_thr=-1, discard_noise=False,
+                               color_label=True)
 
     return multi_labeled_pred
 
