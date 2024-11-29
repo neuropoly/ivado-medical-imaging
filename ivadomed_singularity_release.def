@@ -1,0 +1,41 @@
+BootStrap: docker
+From: python:3.8-slim-bullseye
+
+
+%files
+    # Create and Copy files during setup stage.
+
+%post
+    # Actual setup stage
+    # run a simple test with this data: /app/data/model_final.pkl
+    pip --version
+    python --version
+    python3 --version
+    apt-get update
+    apt-get install wget -y
+    pip install ivadomed
+    pip list
+
+    # GPU support
+    pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 --find-links https://download.pytorch.org/whl/torch_stable.html
+    pip list
+
+%runscript
+    echo "Container was created $NOW"
+    echo "Arguments received: $*"
+    exec echo "$@"
+    echo "Friendly reminder: /home from your Host Environment is automatically mirrored/mapped inside the Singularity Container"
+
+%labels
+    Author developers at ivadomed.org
+    Version GitHub Release Version (not Master)
+    GPU True
+
+%help
+    This is an experimental Singularity Container build to support ivadomed within the Compute Canada
+    Environment.
+
+    Automatically, $HOME, /tmp, /proc, /sys, /dev are mounted into the Singularity Container
+
+# Final build commands (on a system with singularity built):
+# sudo singularity build --notest ivadomed_release.sif ivadomed_singularity_release.def

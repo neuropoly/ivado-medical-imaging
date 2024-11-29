@@ -1,0 +1,50 @@
+Bootstrap: docker
+From: python:3.9.14-bullseye
+
+%post
+    # update complete set of packages & install git
+    apt -y update && \
+    apt install -y git
+    
+    # sanity check while building container
+    python --version
+    python -m pip install --upgrade pip
+    pip --version
+
+    git clone https://github.com/ivadomed/ivadomed.git
+    cd ivadomed/
+    chmod -R 777 /ivadomed
+    pip install -e .[dev]
+    pip list
+    echo "ivadomed installed!"
+
+%runscript
+    echo "ivadomed installed at $(find / -maxdepth 1 -type d -name ivadomed)"
+
+%test
+    # run complete test suite as a sanity check after container is built
+    # Use `--notest` flag to bypass it during the build as 
+    # `sudo singularity build --notest ivadomed_singularity.sif ivadomed_singularity.def` and
+    # manually trigger-able via `singularity test ivadomed_singularity.sif`
+    cd /ivadomed/
+    pytest . -v
+
+%labels
+    Author NeuroPoly and Mila
+    Version 0.0.1
+
+%help
+    Some handy commands for interacting with the Container. For more commands,
+    refer to the official docs at https://docs.sylabs.io/guides/latest/user-guide/
+
+    - To enter into a shell within the container run: `singularity shell ivadomed_singularity.sif`
+    
+    - Mount dir on the Host system inside the container to read, write and execute the files
+    existing on the Host system, /home in this case: singularity shell -B /home ivadomed_singularity.sif
+
+    - Run a command within the container: singularity exec ivadomed_singularity.sif ivadomed --help
+
+
+
+
+

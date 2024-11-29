@@ -1,0 +1,71 @@
+BootStrap: docker
+From: python:3.8-slim-bullseye
+
+%setup
+    # Anything here are executed on the BUILD HOST (not the running host)
+    # wget https://raw.githubusercontent.com/ivadomed/ivadomed/master/requirements_dev.txt
+    # wget https://raw.githubusercontent.com/ivadomed/ivadomed/master/requirements.txt
+
+
+%files
+    # Create and Copy files during setup stage.
+
+%post
+    # Actual setup stage
+    # run a simple test with this data: /app/data/model_final.pkl
+    /usr/local/bin/python -m pip install --upgrade pip
+    pip --version
+    python --version
+    python3 --version
+
+    # Ensure git is there.
+    apt-get update
+    apt-get install git -y
+
+    cd /
+    git clone https://github.com/ivadomed/ivadomed.git
+    cd ivadomed
+    chmod -R 777 .
+
+    # List files for easy sanity check during building debugging.
+    ls -lasth
+
+    # This is where all analyses are stored. To avoid clashing with mounted /home
+
+    # Install the master branch
+    pip install -r requirements_dev.txt
+    pip list
+
+    # CPU support
+    # pip install torch==1.8.0+cpu torchvision==0.9.0+cpu --find-links https://download.pytorch.org/whl/torch_stable.html
+
+    # GPU support
+    pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 --find-links https://download.pytorch.org/whl/torch_stable.html
+    pip list
+
+
+%test
+    # Sanity check after installing. Use `--notest` to bypass during build.
+    # Manually trigger-able via `singularity test my_container.sif`
+    cd /ivadomed
+    pytest
+
+%runscript
+    echo "Container was created $(date) by $(whoami)"
+    echo "Arguments received: $*"
+    exec echo "$@"
+    echo "Friendly reminder: /home from your Host Environment is automatically mirrored/mapped inside the Singularity Container"
+
+%labels
+    Author developers at ivadomed.org
+    Version v0.0.1
+    GPU True
+
+%help
+    This is an experimental Singularity Container build to support ivadomed within the Compute Canada
+    Environment.
+
+    Automatically, $HOME, /tmp, /proc, /sys, /dev are mounted into the Singularity Container
+
+# Final build commands (on a system with singularity built):
+# sudo singularity build --notest ivadomed_master.sif ivadomed_singularity_master.def
