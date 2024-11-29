@@ -1,0 +1,97 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Run conda based env setup and tests on all platforms
+
+on:
+  # Trigger the workflow on push but only for the master branch
+  workflow_dispatch:
+  # Trigger the workflow on pull requests, but reveal no secrets, do not use pull_request_target, see:
+  # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target
+  pull_request:
+
+env:
+  # Even when given -y, apt will still sometimes hang at a prompt if a package
+  # has clarifications to ask; DEBIAN_FRONTEND=noninteractive prevents that,
+  # This will be defined for non-debian platforms below too, but there's no harm in that.
+  # (TravisCI quietly defined this on all their platforms, but we have to give it manually on GithubCI.)
+  DEBIAN_FRONTEND: 'noninteractive'
+  HDF5_USE_FILE_LOCKING: 'FALSE'
+
+jobs:
+  ultra_matrix_test:
+    name: Matrix Test of Python ${{ matrix.python-version }} on ${{ matrix.os }}
+
+    # Matrix driven OS
+    runs-on: ${{ matrix.os }}
+
+    # Default shell for ALL subsequent steps.
+    defaults:
+      run:
+        shell: bash
+
+    # Defining matrix for OS and Python
+    strategy:
+
+      # Ensure exhaustive testing of all scenarios to gather maximum amount of information
+      fail-fast: false
+
+      matrix:
+        os: [ "macos-latest", "windows-latest", "ubuntu-18.04", "ubuntu-20.04",  "macos-10.15" ]
+        python-version: [ 3.6, 3.7, 3.8 ]
+        test-name:
+          - integration-test
+
+    # Main steps for the test to be reproduced across OS x Python
+    steps:
+      # Step 0: Checkout code.
+      - uses: actions/checkout@v2
+
+      # Step 1: Setup python version
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Step 2: Install requirement dependencies.
+      - name: Update miniconda environment with "environment_dev.yml"
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: IvadoMedEnv
+          environment-file: environment_dev.yml
+          python-version: ${{ matrix.python-version }}
+          auto-activate-base: false
+
+      # Step 3: install additional pytest/dev related dependencies
+      - name: Install IvadoMed Main Modules
+        shell: bash -l {0}
+        run: |
+          conda activate IvadoMedEnv
+          pip install -e .
+
+      # Step 4: Full Pytest
+      - name: Test with pytest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+          COVERALLS_PARALLEL: true
+        shell: bash -l {0}
+        run: |
+          conda activate IvadoMedEnv
+          pytest . -v --cov ivadomed/ --cov-report term-missing
+          coveralls --service=github
+
+  # This step is MANDATORY and used to indicate matrix completion to coveralls.io
+  # See here: https://coveralls-python.readthedocs.io/en/latest/usage/configuration.html#github-actions-support
+  coveralls:
+    needs: ultra_matrix_test
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+      - name: Finished
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip3 install --upgrade coveralls
+          coveralls --finish
+

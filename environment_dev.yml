@@ -1,0 +1,9 @@
+name: IvadoMedEnv
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python>=3.6, < 3.9
+  - pip
+  - pip:
+      - --requirement requirements_dev.txt
