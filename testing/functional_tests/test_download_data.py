@@ -25,6 +25,5 @@ def test_download_data_no_dataset_specified():
     with pytest.raises(ArgParseException, match=r"Error parsing args"):
         download_data.main()
 
-
 def teardown_function():
     remove_tmp_dir()

@@ -1,0 +1,48 @@
+stages:
+  - setup_test
+  - release
+variables:
+  PACKAGE_VERSION: "${CI_COMMIT_TAG}"
+
+################################
+# Template for all build steps
+################################
+.build_template:
+  before_script:
+    - pwd
+    - python -V
+    - pip -V
+  script:
+    - echo "Base Job Script. This should be not be seen"
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "yd/gitlab_deploy"
+
+#######################################################
+# Setup and Test Step
+# Must be single stage because multistage artefacts are 6GB with Torch GPUs....
+# GitLab cannot handle such massive artifacts.
+#######################################################
+setup_then_test:
+  extends:
+    - .build_template
+  stage: setup_test
+  tags:
+    - python
+    - windows
+    - shell
+    - GPU
+  script:
+    - ls | Format-Table LastWriteTime,Length,Name
+    - pip install virtualenv
+    - virtualenv venv
+    - venv/Scripts/activate.ps1
+    - pip install -e .
+    - pip install -r requirements_dev.txt
+    - pip install -r requirements_gpu.txt
+    - pip list
+    # Activate VENV
+    - venv/Scripts/activate.ps1
+    # Check Torch CUDA availability, Torch version
+    - python -c "import torch; print(torch.cuda.is_available()); print(torch.__version__)"
+    # Run Full PyTest with GPU
+    - pytest . -v --cov ivadomed/ --cov-report term-missing
