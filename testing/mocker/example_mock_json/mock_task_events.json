@@ -1,0 +1,12 @@
+{
+	"onset": 1,
+	"duration": 2,
+
+	"StimulusPresentation": {
+		"OperatingSystem": "Windows 11",
+		"SoftwareName": "MOCK Software",
+		"SoftwareRRID": "MOCK RRID",
+		"SoftwareVersion": "MOCK Version",
+		"Code": "MOCK Code"
+	}
+}

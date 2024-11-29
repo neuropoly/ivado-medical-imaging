@@ -1,0 +1,56 @@
+{
+	"Manufacturer": "MOCK",
+	"ManufacturersModelName": "MOCK Model",
+	"DeviceSerialNumber": "MOCK Serial Number",
+	"StationName": "MOCK Station",
+	"SoftwareVersions": "MOCK Version",
+	"MagneticFieldStrength": 3,
+	"ReceiveCoilName": "MOCK Coil Name",
+	"ReceiveCoilActiveElements": "HEA;HEP",
+	"GradientSetType": "MOCK Type",
+	"MRTransmitCoilSequence": "MOCK Sequence",
+	"MatrixCoilMode": "GRAPPA",
+	"CoilCombinationMethod": "MOCK Method",
+
+	"PulseSequenceType": "MPRAGE",
+	"ScanningSequence": "MOCK Sequence",
+	"SequenceVariant": "MOCK Variant",
+	"ScanOptions": "MOCK Option",
+	"SequenceName": "MOCK Sequence Name",
+	"PulseSequenceDetails": "MOCK Details",
+	"NonlinearGradientCorrection": "true",
+	"MRAcquisitionType": "2D",
+	"MTState": "true",
+	"SpoilingState": "true",
+
+	"NumberShots": 7,
+	"ParallelReductionFactorInPlane": 8,
+	"ParallelAcquisitionTechnique": "SENSE",
+	"PartialFourier": 9,
+	"PartialFourierDirection": "MOCK Direction",
+	"EffectiveEchoSpacing": 9,
+	"MixingTime": 10,
+	"PhaseEncodingDirection": "k-",
+	"TotalReadoutTime": 11,
+
+	"EchoTime": 12,
+	"InversionTime": 13,
+	"SliceTiming": [14, 15, 16],
+	"SliceEncodingDirection": "j-",
+	"DwellTime": 17,
+
+	"FlipAngle": 1,
+
+	"MultibandAccelerationFactor": 18,
+
+	"AnatomicalLandmarkCoordinates": {"AC": [127,119,149], "PC": [128,93,141], "IH": [131,114,206]},
+
+	"B0FieldIdentifier": "MOCK Identifier",
+	"B0FieldSource": "MOCK Source",
+
+	"InstitutionName": "MOCK Research Center",
+	"InstitutionAddress": "MOCK Address",
+	"InstitutionalDepartmentName": "MOCK Department Name",
+
+	"MultipartID": "MOCK Id 1"
+}

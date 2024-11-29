@@ -1,0 +1,23 @@
+{
+	"Manufacturer": "MOCK",
+	"ManufacturersModelName": "MOCK Model",
+	"DeviceSerialNumber": "MOCK Serial Number",
+	"StationName": "MOCK Station",
+	"SoftwareVersions": "MOCK Version",
+	"InstitutionName": "MOCK Research Center",
+	"InstitutionAddress": "MOCK Address",
+	"InstitutionalDepartmentName": "MOCK Department Name",
+
+	"PixelSize": [1,2,3],
+	"PixelSizeUnits": "mm",
+
+	"BodyPart": "BRAIN",
+	"BodyPartDetails": "corpus callosum",
+	"SampleEnvironment": "in vivo",
+	"SampleStaining": "MOCK Staining",
+	"SamplePrimaryAntibody": "MOCK Primary Antibody",
+	"SampleSecondaryAntibody": "MOCK Secondary Antibody",
+
+	"ChunkTransformationMatrix": [[2, 0, 0], [0, 3, 0], [0, 0, 1]],
+	"ChunkTransformationMatrixAxis": ["X", "Y"]
+}
