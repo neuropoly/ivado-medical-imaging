@@ -1,0 +1,442 @@
+{
+  "command": "train",
+  "gpu_ids": [
+    7
+  ],
+  "path_output": "pytest_output_folder",
+  "debugging": false,
+  "model_name": "unit_test",
+  "object_detection_params": {
+    "object_detection_path": null
+  },
+  "dataset_groups": [
+    {
+      "dataset_group_label": "FileDataSetGroup1",
+      "type": "FILES",
+      "path_data": "C:\\git\\ivadomed\\tmp",
+      "expected_input": 2,
+      "expected_gt": 1,
+      "training": {
+        "input_gt": [
+          [
+            [
+              "sub-01/ses-01/anat/sub-01_ses-01_flip-1_mt-off_MTS.nii",
+              "sub-01/ses-01/anat/sub-01_ses-01_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-01/ses-01/anat/sub-01_ses-01_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-01/ses-02/anat/sub-01_ses-02_flip-1_mt-off_MTS.nii",
+              "sub-01/ses-02/anat/sub-01_ses-02_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-01/ses-02/anat/sub-01_ses-02_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-01/ses-03/anat/sub-01_ses-03_flip-1_mt-off_MTS.nii",
+              "sub-01/ses-03/anat/sub-01_ses-03_flip-1_mt-on_MTS.nii",
+              "sub-01/ses-03/anat/sub-01_ses-03_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-01/ses-03/anat/sub-01_ses-03_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-01/ses-04/anat/sub-01_ses-04_flip-1_mt-off_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-01/ses-04/anat/sub-01_ses-04_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ]
+        ],
+        "missing_files_handle": "skip",
+        "excessive_files_handle": "use_first_and_warn"
+      },
+      "validation": {
+        "input_gt": [
+          [
+            [
+              "sub-02/ses-01/anat/sub-02_ses-01_flip-1_mt-off_MTS.nii",
+              "sub-02/ses-01/anat/sub-02_ses-01_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-02/ses-01/anat/sub-02_ses-01_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-02/ses-02/anat/sub-02_ses-02_flip-1_mt-off_MTS.nii",
+              "sub-02/ses-02/anat/sub-02_ses-02_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-02/ses-02/anat/sub-02_ses-02_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-02/ses-03/anat/sub-02_ses-03_flip-1_mt-off_MTS.nii",
+              "sub-02/ses-03/anat/sub-02_ses-03_flip-1_mt-on_MTS.nii",
+              "sub-02/ses-03/anat/sub-02_ses-03_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-02/ses-03/anat/sub-02_ses-03_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-02/ses-04/anat/sub-02_ses-04_flip-1_mt-off_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-02/ses-04/anat/sub-02_ses-04_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ]
+        ],
+        "missing_files_handle": "skip",
+        "excessive_files_handle": "use_first_and_warn"
+      },
+      "testing": {
+        "input_gt": [
+          [
+            [
+              "sub-03/ses-01/anat/sub-03_ses-01_flip-1_mt-off_MTS.nii",
+              "sub-03/ses-01/anat/sub-03_ses-01_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-03/ses-01/anat/sub-03_ses-01_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-03/ses-02/anat/sub-03_ses-02_flip-1_mt-off_MTS.nii",
+              "sub-03/ses-02/anat/sub-03_ses-02_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-03/ses-02/anat/sub-03_ses-02_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-03/ses-03/anat/sub-03_ses-03_flip-1_mt-off_MTS.nii",
+              "sub-03/ses-03/anat/sub-03_ses-03_flip-1_mt-on_MTS.nii",
+              "sub-03/ses-03/anat/sub-03_ses-03_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-03/ses-03/anat/sub-03_ses-03_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-03/ses-04/anat/sub-03_ses-04_flip-1_mt-off_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-03/ses-04/anat/sub-03_ses-04_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ]
+        ],
+        "missing_files_handle": "skip",
+        "excessive_files_handle": "use_first_and_warn"
+      }
+    },
+    {
+      "dataset_group_label": "FileDataSetGroup2",
+      "type": "FILES",
+      "path_data": "C:\\git\\ivadomed\\tmp",
+      "expected_input": 2,
+      "expected_gt": 1,
+      "training": {
+        "input_gt": [
+          [
+            [
+              "sub-04/ses-01/anat/sub-04_ses-01_flip-1_mt-off_MTS.nii",
+              "sub-04/ses-01/anat/sub-04_ses-01_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-04/ses-01/anat/sub-04_ses-01_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-04/ses-02/anat/sub-04_ses-02_flip-1_mt-off_MTS.nii",
+              "sub-04/ses-02/anat/sub-04_ses-02_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-04/ses-02/anat/sub-04_ses-02_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-04/ses-03/anat/sub-04_ses-03_flip-1_mt-off_MTS.nii",
+              "sub-04/ses-03/anat/sub-04_ses-03_flip-1_mt-on_MTS.nii",
+              "sub-04/ses-03/anat/sub-04_ses-03_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-04/ses-03/anat/sub-04_ses-03_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-04/ses-04/anat/sub-04_ses-04_flip-1_mt-off_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-04/ses-04/anat/sub-04_ses-04_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ]
+        ],
+        "missing_files_handle": "skip",
+        "excessive_files_handle": "use_first_and_warn"
+      },
+      "validation": {
+        "input_gt": [
+          [
+            [
+              "sub-05/ses-01/anat/sub-05_ses-01_flip-1_mt-off_MTS.nii",
+              "sub-05/ses-01/anat/sub-05_ses-01_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-05/ses-01/anat/sub-05_ses-01_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-05/ses-02/anat/sub-05_ses-02_flip-1_mt-off_MTS.nii",
+              "sub-05/ses-02/anat/sub-05_ses-02_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-05/ses-02/anat/sub-05_ses-02_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-05/ses-03/anat/sub-05_ses-03_flip-1_mt-off_MTS.nii",
+              "sub-05/ses-03/anat/sub-05_ses-03_flip-1_mt-on_MTS.nii",
+              "sub-05/ses-03/anat/sub-05_ses-03_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-05/ses-03/anat/sub-05_ses-03_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-05/ses-04/anat/sub-05_ses-04_flip-1_mt-off_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-05/ses-04/anat/sub-05_ses-04_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ]
+        ],
+        "missing_files_handle": "skip",
+        "excessive_files_handle": "use_first_and_warn"
+      },
+      "testing": {
+        "input_gt": [
+          [
+            [
+              "sub-06/ses-01/anat/sub-06_ses-01_flip-1_mt-off_MTS.nii",
+              "sub-06/ses-01/anat/sub-06_ses-01_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-06/ses-01/anat/sub-06_ses-01_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-06/ses-02/anat/sub-06_ses-02_flip-1_mt-off_MTS.nii",
+              "sub-06/ses-02/anat/sub-06_ses-02_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-06/ses-02/anat/sub-06_ses-02_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-06/ses-03/anat/sub-06_ses-03_flip-1_mt-off_MTS.nii",
+              "sub-06/ses-03/anat/sub-06_ses-03_flip-1_mt-on_MTS.nii",
+              "sub-06/ses-03/anat/sub-06_ses-03_flip-1_mt-on_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-06/ses-03/anat/sub-06_ses-03_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ],
+          [
+            [
+              "sub-06/ses-04/anat/sub-06_ses-04_flip-1_mt-off_MTS.nii"
+            ],
+            [
+              "derivatives/labels/sub-06/ses-04/anat/sub-06_ses-04_mt-off_MTS_lesion-manual-rater1.nii"
+            ]
+          ]
+        ],
+        "missing_files_handle": "skip",
+        "excessive_files_handle": "use_first_and_warn"
+      }
+    }
+  ],
+  "expected_input": 2,
+  "expected_gt": 1,
+  "loader_parameters": {
+    "target_suffix": [
+      "_lesion-manual"
+    ],
+    "roi_suffix": null,
+    "path_data": "tmp/data_functional_testing/",
+    "roi_params": {
+      "suffix": null,
+      "slice_filter_roi": null
+    },
+    "slice_filter_params": {
+      "filter_empty_mask": false,
+      "filter_empty_input": true
+    },
+    "slice_axis": "axial",
+    "split_method": "per_patient",
+    "multichannel": false,
+    "soft_input": false
+  },
+  "split_dataset": {
+    "fname_split": null,
+    "random_seed": 1313,
+    "method": "per_patient",
+    "train_fraction": 0.66,
+    "test_fraction": 0.33,
+    "center_test": []
+  },
+  "training_parameters": {
+    "batch_size": 32,
+    "loss": {
+      "name": "DiceLoss"
+    },
+    "training_time": {
+      "num_epochs": 1,
+      "early_stopping_patience": 50,
+      "early_stopping_epsilon": 0.001
+    },
+    "scheduler": {
+      "initial_lr": 0.001,
+      "lr_scheduler": {
+        "name": "CosineAnnealingLR",
+        "base_lr": 1e-05,
+        "max_lr": 0.01
+      }
+    },
+    "balance_samples": {
+      "applied": false,
+      "type": "gt"
+    },
+    "mixup_alpha": null,
+    "transfer_learning": {
+      "retrain_model": null,
+      "retrain_fraction": 1.0
+    }
+  },
+  "default_model": {
+    "name": "Unet",
+    "dropout_rate": 0.3,
+    "bn_momentum": 0.1,
+    "out_channel": 1,
+    "depth": 1,
+    "is_2d": true
+  },
+  "FiLMedUnet": {
+    "applied": false,
+    "metadata": "contrasts",
+    "film_layers": [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "missing_modality": false,
+  "attention_unet": false,
+  "mixup_bool": false,
+  "metadata": null,
+  "uncertainty": {
+    "epistemic": true,
+    "aleatoric": true,
+    "n_it": 2
+  },
+  "postprocessing": {
+    "remove_noise": {
+      "thr": -1
+    },
+    "keep_largest": {},
+    "binarize_prediction": {
+      "thr": 0.5
+    },
+    "fill_holes": {},
+    "remove_small": {
+      "unit": "vox",
+      "thr": 3
+    },
+    "uncertainty": {
+      "thr": -1,
+      "suffix": "_unc-vox.nii.gz"
+    }
+  },
+  "evaluation_parameters": {
+    "targetSize": {
+      "unit": "vox",
+      "thr": [
+        20,
+        100
+      ]
+    },
+    "overlap": {
+      "unit": "vox",
+      "thr": 3
+    }
+  },
+  "transformation": {
+    "Resample": {
+      "wspace": 0.75,
+      "hspace": 0.75
+    },
+    "ElasticTransform": {
+      "alpha_range": [
+        28.0,
+        30.0
+      ],
+      "sigma_range": [
+        3.5,
+        4.5
+      ],
+      "p": 0.1
+    },
+    "RandomAffine": {
+      "degrees": 4.6,
+      "translate": [
+        0.03,
+        0.03
+      ],
+      "scale": [
+        0.98,
+        1
+      ]
+    },
+    "CenterCrop": {
+      "size": [
+        128,
+        128
+      ],
+      "preprocessing": true
+    },
+    "NormalizeInstance": {
+      "applied_to": [
+        "im"
+      ]
+    }
+  },
+  "log_file": "log"
+}

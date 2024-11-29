@@ -10,7 +10,6 @@ from loguru import logger
 from ivadomed.keywords import BidsDataFrameKW, LoaderParamsKW, ContrastParamsKW, ConfigKW
 from ivadomed.loader.bids_dataframe import BidsDataframe
 from ivadomed.scripts import download_data as ivadomed_download_data
-from ivadomed.main import set_loader_params
 import shutil
 import sys
 

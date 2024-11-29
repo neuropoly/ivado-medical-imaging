@@ -2,7 +2,7 @@ import copy
 import random
 from pathlib import Path
 import pickle
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -55,8 +55,8 @@ class MRI3DSubVolumeSegmentationDataset(Dataset):
                  soft_gt: bool = False,
                  is_input_dropout: bool = False,
                  disk_cache: bool=True):
-
-        self.filename_pairs = filename_pairs
+                         
+        self.filename_pairs: List[Tuple[list, list, str, dict]] = filename_pairs
 
         # could be a list of tuple of objects OR path objects to the actual disk equivalent.
         # behaves differently depend on if self.cache is set to true or not.

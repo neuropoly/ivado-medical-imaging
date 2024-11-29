@@ -23,15 +23,27 @@ from ivadomed import visualize as imed_visualize
 from ivadomed.loader import utils as imed_loader_utils
 from ivadomed.loader.balanced_sampler import BalancedSampler
 from ivadomed.keywords import ModelParamsKW, ConfigKW, BalanceSamplesKW, TrainingParamsKW, MetadataKW, WandbKW
+from ivadomed.loader.bids_dataset import BidsDataset
 
 cudnn.benchmark = True
 
 
-def train(model_params, dataset_train, dataset_val, training_params, path_output, device, wandb_params=None,
-          cuda_available=True, metric_fns=None, n_gif=0, resume_training=False, debugging=False):
+def train(model_params: dict,
+          dataset_train: BidsDataset,  # to be replaced with consolidated dataset
+          dataset_val: BidsDataset,  # to be replaced with consolidated dataset
+          training_params: dict,
+          path_output: str,
+          device: str,
+          wandb_params: dict = None,
+          cuda_available: bool = True,
+          metric_fns: list = None,
+          n_gif: int = 0,
+          resume_training: bool = False,
+          debugging: bool = False):
     """Main command to train the network.
 
     Args:
+        wandb_params (dict): Weights and Biases Parameters
         model_params (dict): Model's parameters.
         dataset_train (imed_loader): Training dataset.
         dataset_val (imed_loader): Validation dataset.
@@ -60,7 +72,7 @@ def train(model_params, dataset_train, dataset_val, training_params, path_output
 
     if wandb_tracking:
         # Collect all hyperparameters into a dictionary
-        cfg = { **training_params, **model_params}
+        cfg = {**training_params, **model_params}
 
         # Get the actual project, group, and run names if they exist, else choose the temporary names as default
         project_name = wandb_params.get(WandbKW.PROJECT_NAME, "temp_project")
@@ -73,11 +85,18 @@ def train(model_params, dataset_train, dataset_val, training_params, path_output
         # Initialize WandB with metrics and hyperparameters
         wandb.init(project=project_name, group=group_name, name=run_name, config=cfg, dir=path_output)
 
-    # BALANCE SAMPLES AND PYTORCH LOADER
-    conditions = all([training_params[TrainingParamsKW.BALANCE_SAMPLES][BalanceSamplesKW.APPLIED],
-                      model_params[ModelParamsKW.NAME] != "HeMIS"])
-    sampler_train, shuffle_train = get_sampler(dataset_train, conditions,
-                                               training_params[TrainingParamsKW.BALANCE_SAMPLES][BalanceSamplesKW.TYPE])
+    # If balance sampler is applied and not using HeMIS model,
+    # Then use a sampler.
+    use_sampler: bool = all(
+        [training_params[TrainingParamsKW.BALANCE_SAMPLES][BalanceSamplesKW.APPLIED],
+         model_params[ModelParamsKW.NAME] != "HeMIS"]
+    )
+
+    sampler_train, shuffle_train = get_sampler(
+        dataset_train,
+        use_sampler,
+        training_params[TrainingParamsKW.BALANCE_SAMPLES][BalanceSamplesKW.TYPE]
+    )
 
     train_loader = DataLoader(dataset_train, batch_size=training_params[TrainingParamsKW.BATCH_SIZE],
                               shuffle=shuffle_train, pin_memory=True, sampler=sampler_train,
@@ -85,9 +104,13 @@ def train(model_params, dataset_train, dataset_val, training_params, path_output
                               num_workers=0)
 
     gif_dict = {"image_path": [], "slice_id": [], "gif": []}
+
     if dataset_val:
-        sampler_val, shuffle_val = get_sampler(dataset_val, conditions,
-                                               training_params[TrainingParamsKW.BALANCE_SAMPLES][BalanceSamplesKW.TYPE])
+        sampler_val, shuffle_val = get_sampler(
+            dataset_val,
+            use_sampler,
+            training_params[TrainingParamsKW.BALANCE_SAMPLES][BalanceSamplesKW.TYPE]
+        )
 
         val_loader = DataLoader(dataset_val, batch_size=training_params[TrainingParamsKW.BATCH_SIZE],
                                 shuffle=shuffle_val, pin_memory=True, sampler=sampler_val,
@@ -187,6 +210,7 @@ def train(model_params, dataset_train, dataset_val, training_params, path_output
         train_loss_total, train_dice_loss_total = 0.0, 0.0
         num_steps = 0
         for i, batch in enumerate(train_loader):
+
             # GET SAMPLES
             if model_params[ModelParamsKW.NAME] == ConfigKW.HEMIS_UNET:
                 input_samples = imed_utils.cuda(imed_utils.unstack_tensors(batch["input"]), cuda_available)

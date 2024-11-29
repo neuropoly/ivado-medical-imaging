@@ -1145,7 +1145,7 @@ class RandomBlur(ImedTransform):
             return sample, metadata
 
 
-def get_subdatasets_transforms(transform_params):
+def get_subdatasets_transforms(transform_params: dict) -> Tuple[dict, dict, dict]:
     """Get transformation parameters for each subdataset: training, validation and testing.
 
     Args:
@@ -1172,7 +1172,7 @@ def get_subdatasets_transforms(transform_params):
     return train, valid, test
 
 
-def get_preprocessing_transforms(transforms):
+def get_preprocessing_transforms(transforms: dict) -> dict:
     """Checks the transformations parameters and selects the transformations which are done during preprocessing only.
 
     Args:
@@ -1181,8 +1181,8 @@ def get_preprocessing_transforms(transforms):
     Returns:
         dict: Preprocessing transforms.
     """
-    original_transforms = copy.deepcopy(transforms)
-    preprocessing_transforms = copy.deepcopy(transforms)
+    original_transforms: dict = copy.deepcopy(transforms)
+    preprocessing_transforms: dict = copy.deepcopy(transforms)
     for idx, tr in enumerate(original_transforms):
         if tr == TransformationKW.RESAMPLE or tr == TransformationKW.CENTERCROP or tr == TransformationKW.ROICROP:
             del transforms[tr]
@@ -1243,9 +1243,10 @@ def apply_preprocessing_transforms(transforms, seg_pair, roi_pair=None) -> Tuple
     return (seg_pair, roi_pair)
 
 
-def prepare_transforms(transform_dict, requires_undo=True):
+def prepare_transforms(transform_dict: dict, requires_undo: bool=True) -> Tuple[list, UndoCompose]:
     """
     This function separates the preprocessing transforms from the others and generates the undo transforms related.
+    It is almost always required to
 
     Args:
         transform_dict (dict): Dictionary containing the transforms and there parameters.
@@ -1258,10 +1259,16 @@ def prepare_transforms(transform_dict, requires_undo=True):
     training_undo_transform = None
     if requires_undo:
         training_undo_transform = UndoCompose(Compose(transform_dict.copy()))
-    preprocessing_transforms = get_preprocessing_transforms(transform_dict)
-    prepro_transforms = Compose(preprocessing_transforms, requires_undo=requires_undo)
-    transforms = Compose(transform_dict, requires_undo=requires_undo)
-    tranform_lst = [prepro_transforms if len(preprocessing_transforms) else None, transforms]
+
+    # Filter for only preprocessing transforms
+    preprocessing_transforms: dict = get_preprocessing_transforms(transform_dict)
+
+    prepro_transforms: Compose = Compose(preprocessing_transforms, requires_undo=requires_undo)
+
+    transforms: Compose = Compose(transform_dict, requires_undo=requires_undo)
+
+    tranform_lst: list = [prepro_transforms if len(preprocessing_transforms) else None, transforms]
+
     return tranform_lst, training_undo_transform
 
 

@@ -58,7 +58,7 @@ class MRI2DSegmentationDataset(Dataset):
         stride (list): Size of the pixels' shift between patches, length equals 0 (no patching) or 2 (2d patching).
         is_2d_patch (bool): True if length in model params.
         prepro_transforms (Compose): Transformations to apply before training.
-        transform (Compose): Transformations to apply during training.
+        transform (List[Compose, UndoCompose]): Transformations to apply during training.
         nibabel_cache (bool): determine if the nibabel data object should be cached in memory or not to avoid repetitive
         disk loading
         slice_axis (int): Indicates the axis used to extract 2D slices from 3D NifTI files:

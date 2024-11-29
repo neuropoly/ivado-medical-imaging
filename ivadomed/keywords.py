@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class ConfigKW:
     LOADER_PARAMETERS = "loader_parameters"
     TRAINING_PARAMETERS = "training_parameters"
@@ -27,7 +27,7 @@ class ConfigKW:
     TRAINING_SHA256 = "training_sha256"
 
 
-@dataclass
+@dataclass(frozen=True)
 class WandbKW:
     WANDB_API_KEY = "wandb_api_key"
     PROJECT_NAME = "project_name"
@@ -36,7 +36,7 @@ class WandbKW:
     LOG_GRADS_EVERY = "log_grads_every"
 
 
-@dataclass
+@dataclass(frozen=True)
 class LoaderParamsKW:
     PATH_DATA: str = "path_data"
     BIDS_CONFIG: str = "bids_config"
@@ -53,9 +53,11 @@ class LoaderParamsKW:
     IS_INPUT_DROPOUT: str = "is_input_dropout"
     SLICE_FILTER_PARAMS: str = "slice_filter_params"
     SUBJECT_SELECTION: str = "subject_selection"
+    MULTI_PATH_LOADER: str = "multi_loader"
+    TRADITIONAL_BIDS_LOADER: str = "traditional_bids_loader"
 
 
-@dataclass
+@dataclass(frozen=True)
 class SplitDatasetKW:
     SPLIT_METHOD: str = "split_method"
     FNAME_SPLIT: str = "fname_split"
@@ -66,19 +68,19 @@ class SplitDatasetKW:
     BALANCE: str = "balance"
 
 
-@dataclass
+@dataclass(frozen=True)
 class DataTestingKW:
     DATA_TYPE: str = "data_type"
     DATA_VALUE: str = "data_value"
 
 
-@dataclass
+@dataclass(frozen=True)
 class TrainingParamsKW:
     BALANCE_SAMPLES: str = "balance_samples"
     BATCH_SIZE: str = "batch_size"
 
 
-@dataclass
+@dataclass(frozen=True)
 class TransformationKW:
     ROICROP: str = "ROICrop"
     CENTERCROP: str = "CenterCrop"
@@ -86,20 +88,20 @@ class TransformationKW:
     RANDOM_AFFINE: str = "RandomAffine"
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalanceSamplesKW:
     APPLIED: str = "applied"
     TYPE: str = "type"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContrastParamsKW:
     CONTRAST_LST: str = "contrast_lst"  # The list help determine the number of model parameter inputs.
     BALANCE: str = "balance"
     TRAINING_VALIDATION: str = "training_validation"
     TESTING: str = "testing"
 
-
+@dataclass(frozen=True)
 class ModelParamsKW:
     LENGTH_2D: str = "length_2D"
     STRIDE_2D: str = "stride_2D"
@@ -124,10 +126,10 @@ class ModelParamsKW:
     DEPTH: str = "depth"
     MISSING_PROBABILITY: str = "missing_probability"
     MISSING_PROBABILITY_GROWTH: str = "missing_probability_growth"
+    DROPOUT_RATE: str = "dropout_rate"
     N_FILTERS: str = "n_filters"
 
-
-@dataclass
+@dataclass(frozen=True)
 class SubjectDictKW:
     ABSOLUTE_PATHS: str = "absolute_paths"
     DERIV_PATH: str = "deriv_path"
@@ -136,12 +138,12 @@ class SubjectDictKW:
     EXTENSIONS: str = "extensions"
 
 
-@dataclass
+@dataclass(frozen=True)
 class SubjectDataFrameKW:
     FILENAME: str = "filename"
 
 
-@dataclass
+@dataclass(frozen=True)
 class OptionKW:
     METADATA: str = "metadata"
     FNAME_PRIOR: str = 'fname_prior'
@@ -156,7 +158,7 @@ class OptionKW:
     NO_PATCH: str = "no_patch"
 
 
-@dataclass
+@dataclass(frozen=True)
 class BidsDataFrameKW:
     # bids layout converted to dataframe during bids dataset creation
     PATH: str = "path"   # full path.
@@ -169,13 +171,13 @@ class BidsDataFrameKW:
     DERIVATIVES: str = "derivatives"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ROIParamsKW:
     SUFFIX: str = "suffix"
     SLICE_FILTER_ROI: str = "slice_filter_roi"
 
 
-@dataclass
+@dataclass(frozen=True)
 class MetadataKW:
     CONTRAST: str = "contrast"
     CONTRASTS: str = "contrasts"
@@ -211,7 +213,7 @@ class MetadataKW:
     PIXEL_SIZE_UNITS: str = "PixelSizeUnits"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ObjectDetectionParamsKW:
     GPU_IDS: str = "gpu_ids"
     PATH_OUTPUT: str = "path_output"
@@ -219,48 +221,48 @@ class ObjectDetectionParamsKW:
     SAFETY_FACTOR: str = "safety_factor"
 
 
-@dataclass
+@dataclass(frozen=True)
 class UncertaintyKW:
     ALEATORIC: str = 'aleatoric'
     N_IT: str = "n_it"
 
 
-@dataclass
+@dataclass(frozen=True)
 class PostprocessingKW:
     BINARIZE_PREDICTION: str = "binarize_prediction"
 
 
-@dataclass
+@dataclass(frozen=True)
 class BinarizeProdictionKW:
     THR: str = "thr"
 
 
-@dataclass
+@dataclass(frozen=True)
 class SliceFilterParamsKW:
     FILTER_EMPTY_MASK: str = "filter_empty_mask"
 
 
-@dataclass
+@dataclass(frozen=True)
 class IgnoredFolderKW:
     MACOSX: str = "__MACOSX"
 
 
-@dataclass
+@dataclass(frozen=True)
 class MetricsKW:
     RECALL_SPECIFICITY: str = "recall_specificity"
     DICE: str = "dice"
 
-@dataclass
+@dataclass(frozen=True)
 class MetadataParamsKW:
     CONTRAST = "contrast"
     BOUNDING_BOX = "bounding_box"
 
-@dataclass
+@dataclass(frozen=True)
 class MetadataChoiceKW:
     MRI_PARAMS = "mri_params"
     CONTRASTS = "contrasts"
 
-@dataclass
+@dataclass(frozen=True)
 class SegmentationDatasetKW:
     X_MIN: str = 'x_min'
     X_MAX: str = 'x_max'
@@ -270,7 +272,7 @@ class SegmentationDatasetKW:
     Z_MAX: str = 'z_max'
     HANDLER_INDEX: str = 'handler_index'
 
-@dataclass
+@dataclass(frozen=True)
 class SegmentationPairKW:
     GT_METADATA = "gt_metadata"
     INPUT_METADATA = "input_metadata"
@@ -278,3 +280,67 @@ class SegmentationPairKW:
     GT = "gt"
     INPUT = "input"
     ROI = "roi"
+
+@dataclass(frozen=True)
+class CommandKW:
+    TRAIN = "train"
+    SEGMENT = "segment"
+    TEST = "test"
+
+@dataclass(frozen=True)
+class DataloaderKW:
+    # Most of these keywords are used in V2 Dataloader to support cross BIDS/Regex/File Dataset loading.
+
+    # AllDatasetGroups Level
+    DATASET_GROUPS: str = "dataset_groups"
+
+    # DatasetGroup Level
+    DATASET_GROUP_LABEL: str = "dataset_group_label"
+    TRAINING: str = "training"
+    VALIDATION: str = "validation"
+    TESTING: str = "testing"
+    # Reserved DatasetGroup to be implemented
+    TRAINING_VALIDATION: str = "training_validation"
+    TRAINING_TESTING: str = "training_testing"
+    TRAINING_VALIDATION_TESTING: str = "training_validation_testing"
+
+    # Dataset Level
+    TYPE: str = "type"
+    DATASET_LABEL: str = "dataset_label"
+    INPUT_GT: str = "input_gt"
+    EXPECTED_INPUT: str = "expected_input"
+    EXPECTED_GT: str = "expected_gt"
+    # Reserved keyword for future implementation
+    MISSING_FILES_HANDLE: str = "missing_files_handle"
+    EXCESSIVE_FILES_HANDLE: str = "excessive_files_handle"
+
+    SUBSET_LABEL: str = "subset_label"
+    PATH_DATA: str = "path_data"
+
+
+@dataclass(frozen=True)
+class DatasetTypeKW:
+    """
+    Used to specify the datatype in the display_selected_transfoms
+    """
+    TRAINING = "training"
+    VALIDATION = "validation"
+    TESTING = "testing"
+
+@dataclass(frozen=True)
+class FileMissingHandleKW:
+    """
+    Keywords used to specify the handling of missing files
+    """
+    SKIP = "skip"
+    RAISE = "raise"
+    IGNORE = "ignore"
+
+@dataclass(frozen=True)
+class FileExcessiveHandleKW:
+    """
+    Keywords used to specify the handling of excessive files
+    """
+    USE_FIRST_AND_WARN = "use_first_and_warn"
+
+
