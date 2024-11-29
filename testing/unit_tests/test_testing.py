@@ -170,7 +170,7 @@ def test_inference_2d_microscopy(download_data_testing_test_files, transforms_di
     }
     loader_params.update({"model_params": model_params})
 
-    bids_df = BidsDataframe(loader_params, __tmp_dir__, derivatives=True)
+    bids_df = BidsDataframe(loader_params, str(__tmp_dir__), derivatives=True)
 
     # Get Testing dataset
     ds_test = imed_loader.load_dataset(bids_df, **loader_params)
@@ -206,7 +206,7 @@ def test_inference_2d_microscopy(download_data_testing_test_files, transforms_di
                                                    ofolder=str(__output_dir__),
                                                    cuda_available=cuda_available)
 
-    assert len([x for x in __output_dir__.iterdir() if x.name.endswith(".nii.gz")]) == len(test_lst)
+    assert len([x for x in __output_dir__.iterdir() if x.name.endswith(".nii.gz")]) == len(test_lst) + 1
     assert len([x for x in __output_dir__.iterdir() if x.name.endswith(".png")]) == 2*len(test_lst)
 
 

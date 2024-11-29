@@ -3,12 +3,12 @@ import shutil
 from pathlib import Path
 from ivadomed.utils import init_ivadomed
 from ivadomed import config_manager as imed_config_manager
-from testing.common_testing_util import remove_tmp_dir, path_repo_root, path_temp, path_data_functional_source, \
+from testing.common_testing_util import remove_tmp_dir, path_repo_root, path_temp, new_path_temp, path_data_functional_source, \
     path_data_functional_tmp, download_dataset
 
 __test_dir__ = Path(path_repo_root, 'testing/functional_tests')
 __data_testing_dir__ = path_data_functional_source
-__tmp_dir__ = path_temp
+__tmp_dir__ = new_path_temp
 
 init_ivadomed()
 
@@ -50,8 +50,8 @@ def create_tmp_dir(copy_data_testing_dir=True):
         copy_data_testing_dir (bool): If true, copy the __data_testing_dir_ref__ folder
             into the ``tmp`` folder.
     """
-    remove_tmp_dir()
-    Path(path_temp).mkdir(parents=True, exist_ok=True)
+    Path(path_temp).mkdir(parents=False, exist_ok=True)
     if Path(path_data_functional_source).exists() and copy_data_testing_dir:
+        shutil.rmtree(path_data_functional_tmp, ignore_errors=True)
         shutil.copytree(path_data_functional_source,
                         path_data_functional_tmp)

@@ -3,13 +3,13 @@ import shutil
 import pytest
 from pathlib import Path
 from ivadomed.utils import init_ivadomed
-from testing.common_testing_util import remove_tmp_dir, path_repo_root, path_temp, path_data_testing_tmp, \
+from testing.common_testing_util import remove_tmp_dir, path_repo_root, new_path_temp, path_temp, path_data_testing_tmp, \
     path_data_testing_source, download_dataset, path_data_multi_sessions_contrasts_source, \
     path_data_multi_sessions_contrasts_tmp
 
 __test_dir__ = Path(path_repo_root, 'testing/unit_tests')
 __data_testing_dir__ = path_data_testing_tmp
-__tmp_dir__ = path_temp
+__tmp_dir__ = new_path_temp
 
 init_ivadomed()
 
@@ -44,9 +44,9 @@ def create_tmp_dir(copy_data_testing_dir=True):
         copy_data_testing_dir (bool): If true, copy the __data_testing_dir_ref__ folder
             into the ``tmp`` folder.
     """
-    remove_tmp_dir()
-    Path(path_temp).mkdir()
+    Path(path_temp).mkdir(parents=False, exist_ok=True)
     if Path(path_data_testing_source).exists() and copy_data_testing_dir:
+        shutil.rmtree(path_data_testing_tmp, ignore_errors=True)
         shutil.copytree(path_data_testing_source,
                         path_data_testing_tmp)
 
@@ -62,6 +62,7 @@ def create_tmp_dir_multi_session():
     remove_tmp_dir()
     Path(path_temp).mkdir()
     if Path(path_data_multi_sessions_contrasts_source).exists():
+        shutil.rmtree(path_data_multi_sessions_contrasts_tmp, ignore_errors=True)
         shutil.copytree(path_data_multi_sessions_contrasts_source,
                         path_data_multi_sessions_contrasts_tmp,
                         ignore=ignore_git_pattern)
