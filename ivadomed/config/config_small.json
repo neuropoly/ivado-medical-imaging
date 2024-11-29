@@ -28,7 +28,7 @@
     "split_dataset": {
         "fname_split": null,
         "random_seed": 6,
-        "split_method" : "participant_id",
+        "split_method": "participant_id",
         "data_testing": {"data_type": "institution_id", "data_value":["amu"]},
         "balance": null,
         "train_fraction": 0.6,
@@ -102,12 +102,11 @@
             "dataset_type": ["training"]
         },
         "ElasticTransform": {
-			"alpha_range": [28.0, 30.0],
-			"sigma_range":  [3.5, 4.5],
-			"p": 0.1,
+            "alpha_range": [28.0, 30.0],
+            "sigma_range":  [3.5, 4.5], "p": 0.1,
             "applied_to": ["im", "gt"],
             "dataset_type": ["training"]
         },
-      "NormalizeInstance": {"applied_to": ["im"]}
+        "NormalizeInstance": {"applied_to": ["im"]}
     }
 }

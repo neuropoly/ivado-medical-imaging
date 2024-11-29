@@ -23,13 +23,13 @@
         },
         "slice_axis": "sagittal",
         "multichannel": false,
-	    "soft_gt": true
+        "soft_gt": true
     },
     "split_dataset": {
         "fname_split": null,
         "random_seed": 8,
-        "split_method" : "participant_id",
-        "data_testing": {"data_type": null, "data_value":[]},
+        "split_method": "participant_id",
+        "data_testing": {"data_type": null, "data_value": []},
         "balance": null,
         "train_fraction": 0.6,
         "test_fraction": 0.2
@@ -38,8 +38,8 @@
         "batch_size": 2,
         "loss": {
             "name": "LossCombination",
-	    "losses_list":["AdapWingLoss","L2loss","DiceLoss"],
-	    "params_list":[null,null,null]
+            "losses_list":["AdapWingLoss","L2loss","DiceLoss"],
+            "params_list":[null,null,null]
         },
         "training_time": {
             "num_epochs": 200,
@@ -86,18 +86,16 @@
         "overlap": {"unit": "vox", "thr": 3}
     },
     "transformation": {
-	    "ElasticTransform": {
+        "ElasticTransform": {
                         "alpha_range": [28.0, 30.0],
                         "sigma_range":  [3.5, 4.5],
                         "p": 0.1,
             "applied_to": ["im", "gt"],
             "dataset_type": ["training"]
             },
-
             "CenterCrop":{
                     "size": [320,128]
             },
-
-      "NormalizeInstance": {"applied_to": ["im"]}
+        "NormalizeInstance": {"applied_to": ["im"]}
     }
 }

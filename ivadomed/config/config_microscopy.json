@@ -45,8 +45,8 @@
     "split_dataset": {
         "fname_split": null,
         "random_seed": 6,
-        "split_method" : "sample_id",
-        "data_testing": {"data_type": null, "data_value":[]},
+        "split_method": "sample_id",
+        "data_testing": {"data_type": null, "data_value": []},
         "balance": null,
         "train_fraction": 0.6,
         "test_fraction": 0.1
@@ -114,6 +114,6 @@
             "applied_to": ["im", "gt"],
             "dataset_type": ["training"]
         },
-      "NormalizeInstance": {"applied_to": ["im"]}
+        "NormalizeInstance": {"applied_to": ["im"]}
     }
 }
