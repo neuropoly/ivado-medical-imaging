@@ -318,6 +318,72 @@ def get_arguments(parser, args):
     return args
 
 
+def add_version_info(context: dict) -> None:
+    """Add Ivadomed version and dataset version in config context.
+
+    Args:
+        context (dict): context dict.
+    Returns:
+        None.
+    """
+    path_data = context.get(ConfigKW.LOADER_PARAMETERS).get(LoaderParamsKW.PATH_DATA)
+
+    context[ConfigKW.IVADOMED_VERSION] = _version_string()
+    datasets_version = get_datasets_versions(context)
+    datasets_dict = {}
+
+    path_data = format_path_data(path_data)
+    for i_dataset in range(len(path_data)):
+        origin = _get_origin(path_data[i_dataset])
+        if origin != "?!?":
+            datasets_dict[origin] = datasets_version[i_dataset]
+        else:
+            datasets_dict[path_data[i_dataset]] = "data_is_not_annexed"
+
+    context[ConfigKW.DATASETS_VERSION] = datasets_dict
+
+
+def get_datasets_versions(context: dict) -> list:
+    """Get the commit SHA for dataset versions in context.
+
+    Args:
+        context (dict): context dict.
+    Returns:
+        datasets_version (list) - list of git commit SHA for input datasets
+    """
+    path_data = context.get(ConfigKW.LOADER_PARAMETERS).get(LoaderParamsKW.PATH_DATA)
+    datasets_version = []
+
+    if isinstance(path_data, str):
+        datasets_version = [__get_commit(path_to_git_folder=path_data)]
+    elif isinstance(path_data, list):
+        for Dataset in path_data:
+            datasets_version.append(__get_commit(path_to_git_folder=Dataset))
+
+    return datasets_version
+
+
+def _get_origin(path_to_git_folder: str) -> str:
+    """Get GIT remote origin.
+
+    Args:
+        path_to_git_folder (str): Path to GIT folder.
+    Returns:
+        str: git remote origin.
+    """
+    path_to_git_folder = Path(path_to_git_folder).expanduser().absolute()
+
+    p = subprocess.Popen(["git", "remote", "get-url", "origin"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         cwd=path_to_git_folder)
+    output, _ = p.communicate()
+    status = p.returncode
+    if status == 0:
+        origin = output.decode().strip()
+    else:
+        origin = "?!?"
+    return origin
+
+
 def __get_commit(path_to_git_folder=None):
     """Get GIT ivadomed commit.
 
@@ -435,7 +501,7 @@ def get_path_data(args, context):
             logger.error("Have not specified a path-data argument via CLI nor config file.")
 
 
-def format_path_data(path_data):
+def format_path_data(path_data: list or str) -> list:
     """
     Args:
         path_data (list or str): Either a list of paths, or just one path.

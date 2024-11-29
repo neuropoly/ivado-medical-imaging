@@ -25,6 +25,8 @@ class ConfigKW:
     HEMIS_UNET = "HeMISUnet"
     SPLIT_PATH = "split_path"
     TRAINING_SHA256 = "training_sha256"
+    IVADOMED_VERSION: str = "ivadomed_version"
+    DATASETS_VERSION: str = "datasets_version"
 
 
 @dataclass

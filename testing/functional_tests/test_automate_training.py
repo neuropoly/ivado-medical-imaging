@@ -4,7 +4,7 @@ import os
 from pytest_console_scripts import script_runner
 from pathlib import Path
 from testing.functional_tests.t_utils import __tmp_dir__, create_tmp_dir, __data_testing_dir__, \
-    download_functional_test_files, check_sha256
+    download_functional_test_files, check_tags
 from testing.common_testing_util import remove_tmp_dir
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def test_automate_training(download_functional_test_files, script_runner):
     assert Path(__output_dir__, 'average_eval.csv').exists()
 
     # check sha256 is recorded in config_file.json
-    check_sha256(str(file_config))
+    check_tags(str(file_config))
 
 
 def test_automate_training_run_test_debug(download_functional_test_files):
@@ -86,7 +86,7 @@ def test_automate_training_run_test(download_functional_test_files, script_runne
     assert Path(__output_dir__, 'average_eval.csv').exists()
 
     # check sha256 is recorded in config_file.json
-    check_sha256(str(file_config))
+    check_tags(str(file_config))
 
 
 # def teardown_function():

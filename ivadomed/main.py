@@ -371,6 +371,8 @@ def run_command(context, n_gif=0, thr_increment=None, resume_training=False, no_
 
     # Create a log with the version of the Ivadomed software and the version of the Annexed dataset (if present)
     create_dataset_and_ivadomed_version_log(context)
+    # Add Ivadomed/dataset version info to config file
+    imed_utils.add_version_info(context)
 
     cuda_available, device = imed_utils.define_device(context[ConfigKW.GPU_IDS][0])
 
@@ -544,13 +546,7 @@ def create_dataset_and_ivadomed_version_log(context):
     path_data = context.get(ConfigKW.LOADER_PARAMETERS).get(LoaderParamsKW.PATH_DATA)
 
     ivadomed_version = imed_utils._version_string()
-    datasets_version = []
-
-    if isinstance(path_data, str):
-        datasets_version = [imed_utils.__get_commit(path_to_git_folder=path_data)]
-    elif isinstance(path_data, list):
-        for Dataset in path_data:
-            datasets_version.append(imed_utils.__get_commit(path_to_git_folder=Dataset))
+    datasets_version = imed_utils.get_datasets_versions(context)
 
     path_log = Path(context.get(ConfigKW.PATH_OUTPUT), 'version_info.log')
 
