@@ -14,6 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from pathlib import Path
 
+import ivadomed.architecture.layers_common
 from ivadomed import losses as imed_losses
 from ivadomed import mixup as imed_mixup
 from ivadomed import metrics as imed_metrics
@@ -116,8 +117,8 @@ def train(model_params, dataset_train, dataset_val, training_params, path_output
         else:
             reset = True
         # Freeze first layers and reset last layers
-        model = imed_models.set_model_for_retrain(old_model_path, retrain_fraction=fraction, map_location=device,
-                                                  reset=reset)
+        model = ivadomed.architecture.layers_common.set_model_for_retrain(old_model_path, retrain_fraction=fraction, map_location=device,
+                                                                          reset=reset)
     else:
         logger.info("Initialising model's weights from scratch.")
         model_class = getattr(imed_models, model_params[ModelParamsKW.NAME])

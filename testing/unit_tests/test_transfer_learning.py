@@ -1,6 +1,8 @@
 import pytest
 import torch
 import torch.backends.cudnn as cudnn
+
+import ivadomed.architecture.layers_common
 from ivadomed import models as imed_models
 from testing.unit_tests.t_utils import create_tmp_dir,  __data_testing_dir__, download_data_testing_test_files
 from testing.common_testing_util import remove_tmp_dir
@@ -28,8 +30,8 @@ def test_transfer_learning(download_data_testing_test_files, path_model, fractio
     # Load pretrained model
     model_pretrained = torch.load(path_model, map_location=device)
     # Setup model for retrain
-    model_to_retrain = imed_models.set_model_for_retrain(path_model, retrain_fraction=fraction,
-                                                         map_location=device)
+    model_to_retrain = ivadomed.architecture.layers_common.set_model_for_retrain(path_model, retrain_fraction=fraction,
+                                                                                 map_location=device)
 
     logger.info(f"\nSet fraction to retrain: {fraction}")
 

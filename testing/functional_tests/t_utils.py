@@ -21,9 +21,9 @@ def download_functional_test_files():
     download_dataset("data_functional_testing")
 
 
-def check_sha256(file_config):
+def check_tags(file_config):
     """
-    This function checks if sha256 is generated in according to config file
+    This function checks if certain tags are generated in according to config file
     """
     initial_config = imed_config_manager.ConfigurationManager(file_config).get_config()
     result = []
@@ -35,6 +35,8 @@ def check_sha256(file_config):
     for generated_config in result:
         config = imed_config_manager.ConfigurationManager(generated_config).get_config()
         assert 'training_sha256' in config
+        assert 'ivadomed_version' in config
+        assert 'datasets_version' in config
 
 
 def create_tmp_dir(copy_data_testing_dir=True):

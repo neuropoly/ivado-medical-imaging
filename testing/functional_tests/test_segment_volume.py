@@ -4,9 +4,11 @@ import nibabel as nib
 import numpy as np
 import pytest
 import torch
-from ivadomed import models as imed_models
+
+import ivadomed.architecture.unet.unet
+import ivadomed.architecture.unet.unet3d
 from ivadomed import inference as imed_inference
-from testing.functional_tests.t_utils import create_tmp_dir, __data_testing_dir__, __tmp_dir__, download_functional_test_files
+from testing.functional_tests.t_utils import create_tmp_dir, __data_testing_dir__, __tmp_dir__
 from testing.common_testing_util import remove_tmp_dir
 from pathlib import Path
 
@@ -29,11 +31,11 @@ PATH_ROI = Path(__data_testing_dir__, "derivatives", "labels", "sub-unf01", "ana
 
 
 def test_segment_volume_2d_NumpyToTensor_retrocompatibility(download_functional_test_files):
-    model = imed_models.Unet(in_channel=1,
-                             out_channel=1,
-                             depth=2,
-                             dropout_rate=DROPOUT,
-                             bn_momentum=BN)
+    model = ivadomed.architecture.unet.unet.Unet(in_channel=1,
+                                                 out_channel=1,
+                                                 depth=2,
+                                                 dropout_rate=DROPOUT,
+                                                 bn_momentum=BN)
 
     if not PATH_MODEL.exists():
         PATH_MODEL.mkdir(parents=True, exist_ok=True)
@@ -82,11 +84,11 @@ def test_segment_volume_2d_NumpyToTensor_retrocompatibility(download_functional_
 
 
 def test_segment_volume_2d(download_functional_test_files):
-    model = imed_models.Unet(in_channel=1,
-                             out_channel=1,
-                             depth=2,
-                             dropout_rate=DROPOUT,
-                             bn_momentum=BN)
+    model = ivadomed.architecture.unet.unet.Unet(in_channel=1,
+                                                 out_channel=1,
+                                                 depth=2,
+                                                 dropout_rate=DROPOUT,
+                                                 bn_momentum=BN)
 
     if not PATH_MODEL.exists():
         PATH_MODEL.mkdir(parents=True, exist_ok=True)
@@ -134,11 +136,11 @@ def test_segment_volume_2d(download_functional_test_files):
 
 
 def test_segment_volume_2d_no_prepro_transform(download_functional_test_files):
-    model = imed_models.Unet(in_channel=1,
-                             out_channel=1,
-                             depth=2,
-                             dropout_rate=DROPOUT,
-                             bn_momentum=BN)
+    model = ivadomed.architecture.unet.unet.Unet(in_channel=1,
+                                                 out_channel=1,
+                                                 depth=2,
+                                                 dropout_rate=DROPOUT,
+                                                 bn_momentum=BN)
 
     if not PATH_MODEL.exists():
         PATH_MODEL.mkdir()
@@ -180,11 +182,11 @@ def test_segment_volume_2d_no_prepro_transform(download_functional_test_files):
 
 @pytest.mark.parametrize("center_crop", [[200, 200]])
 def test_segment_volume_2d_with_patches(download_functional_test_files, center_crop):
-    model = imed_models.Unet(in_channel=1,
-                             out_channel=1,
-                             depth=2,
-                             dropout_rate=DROPOUT,
-                             bn_momentum=BN)
+    model = ivadomed.architecture.unet.unet.Unet(in_channel=1,
+                                                 out_channel=1,
+                                                 depth=2,
+                                                 dropout_rate=DROPOUT,
+                                                 bn_momentum=BN)
 
     if not PATH_MODEL.exists():
         PATH_MODEL.mkdir(parents=True, exist_ok=True)
@@ -305,9 +307,9 @@ def test_segment_volume_2d_without_patches(download_functional_test_files, cente
 
 @pytest.mark.parametrize("center_crop", [[192, 192, 16]])
 def test_segment_volume_3d(download_functional_test_files, center_crop):
-    model = imed_models.Modified3DUNet(in_channel=1,
-                                       out_channel=1,
-                                       base_n_filter=1)
+    model = ivadomed.architecture.unet.unet3d.Modified3DUNet(in_channel=1,
+                                                             out_channel=1,
+                                                             base_n_filter=1)
 
     if not PATH_MODEL.exists():
         PATH_MODEL.mkdir(parents=True, exist_ok=True)

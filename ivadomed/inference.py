@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch import tensor
 
+import ivadomed.architecture.layers_common
 from ivadomed.loader.mri3d_subvolume_segmentation_dataset import MRI3DSubVolumeSegmentationDataset
 from ivadomed.loader.mri2d_segmentation_dataset import MRI2DSegmentationDataset
 from ivadomed.transforms import UndoCompose
@@ -373,7 +374,7 @@ def segment_volume(folder_model: str, fname_images: list, gpu_id: int = 0, optio
     # Check if model folder exists and get filenames to be stored as string
     fname_model: str
     fname_model_metadata: str
-    fname_model, fname_model_metadata = imed_models.get_model_filenames(folder_model)
+    fname_model, fname_model_metadata = ivadomed.architecture.layers_common.get_model_filenames(folder_model)
 
     # Load model training config
     context = imed_config_manager.ConfigurationManager(fname_model_metadata).get_config()
