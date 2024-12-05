@@ -462,8 +462,8 @@ def get_loss_function(params):
 
     # Check if implemented
     loss_function_available = ["DiceLoss", "FocalLoss", "GeneralizedDiceLoss", "FocalDiceLoss", "MultiClassDiceLoss",
-                               "BinaryCrossEntropyLoss", "TverskyLoss", "FocalTverskyLoss", "AdapWingLoss", "L2loss",
-                               "LossCombination"]
+                               "BinaryCrossEntropyLoss", "CrossEntropyLoss", "TverskyLoss", "FocalTverskyLoss",
+                               "AdapWingLoss", "L2loss", "LossCombination"]
     if loss_name not in loss_function_available:
         raise ValueError(
             "Unknown Loss function: {}, please choose between {}".format(loss_name, loss_function_available))

@@ -78,6 +78,44 @@ class BinaryCrossEntropyLoss(nn.Module):
         return self.loss_fct(prediction, target.float())
 
 
+class CrossEntropyLoss(nn.Module):
+    """(`CrossEntropyLoss <https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html#CrossEntropyLoss`__).
+
+    Args:
+        include_background (bool): If True, then an extra channel is added, which represents the background class.
+        weight (list of floats): List containing the weight given to each class. Default: None.
+
+    Attributes:
+        include_background (bool): If True, then an extra channel is added, which represents the background class.
+        device (str): Indicate "cuda" if GPU is available, else "cpu".
+        weight (Tensor): 1D Tensor containing the weight given to each class.
+        loss_fct (CrossEntropyLoss): Cross entropy loss function from torch library.
+    """
+
+    def __init__(self, include_background=True, weight=None):
+        super(CrossEntropyLoss, self).__init__()
+        self.include_background = include_background
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.weight = torch.tensor(np.asarray(weight).astype(np.float32)).to(self.device) if weight else None
+        self.loss_fct = nn.CrossEntropyLoss(self.weight)
+
+    def forward(self, prediction, target):
+
+        if self.include_background:
+            # init
+            size_background = [prediction.size(0), 1] + list(prediction.size())[2:]
+            prediction_background = torch.zeros(size_background, dtype=prediction.dtype)
+            target_background = torch.zeros(size_background, dtype=target.dtype)
+            # fill with opposite
+            prediction_background[prediction.sum(1)[:, None, :, :] == 0] = 1
+            target_background[target.sum(1)[:, None, :, :] == 0] = 1
+            # Concat
+            prediction = torch.cat([prediction, prediction_background.to(prediction.device)], dim=1)
+            target = torch.cat([target, target_background.to(target.device)], dim=1)
+
+        return self.loss_fct(prediction, torch.argmax(target, dim=1))
+
+
 class FocalLoss(nn.Module):
     """FocalLoss.
 
