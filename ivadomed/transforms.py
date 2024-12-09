@@ -4,18 +4,21 @@ import math
 import numbers
 import random
 
+from typing import Tuple
+
 import numpy as np
 import torch
 from loguru import logger
 from scipy.ndimage import zoom
-from scipy.ndimage.filters import gaussian_filter
-from scipy.ndimage.interpolation import map_coordinates, affine_transform
-from scipy.ndimage.measurements import label, center_of_mass
-from scipy.ndimage.morphology import binary_dilation, binary_fill_holes, binary_closing
+from scipy.ndimage import gaussian_filter, map_coordinates, affine_transform, label, center_of_mass, binary_dilation, \
+    binary_fill_holes, binary_closing
 from skimage.exposure import equalize_adapthist
 from torchvision import transforms as torchvision_transforms
+import torchio as tio
+
 
 from ivadomed.loader import utils as imed_loader_utils
+from ivadomed.keywords import TransformationKW, MetadataKW
 
 
 def multichannel_capable(wrapped):
@@ -237,11 +240,11 @@ class Resample(ImedTransform):
     @two_dim_compatible
     def undo_transform(self, sample, metadata=None):
         """Resample to original resolution."""
-        assert "data_shape" in metadata
+        assert MetadataKW.DATA_SHAPE in metadata
         is_2d = sample.shape[-1] == 1
 
         # Get params
-        original_shape = metadata["preresample_shape"]
+        original_shape = metadata[MetadataKW.PRE_RESAMPLE_SHAPE]
         current_shape = sample.shape
         params_undo = [x / y for x, y in zip(original_shape, current_shape)]
         if is_2d:
@@ -250,7 +253,7 @@ class Resample(ImedTransform):
         # Undo resampling
         data_out = zoom(sample,
                         zoom=params_undo,
-                        order=1 if metadata['data_type'] == 'gt' else 2)
+                        order=1 if metadata[MetadataKW.DATA_TYPE] == 'gt' else 2)
 
         # Data type
         data_out = data_out.astype(sample.dtype)
@@ -265,8 +268,9 @@ class Resample(ImedTransform):
         # Get params
         # Voxel dimension in mm
         is_2d = sample.shape[-1] == 1
-        metadata['preresample_shape'] = sample.shape
-        zooms = list(metadata["zooms"])
+        metadata[MetadataKW.PRE_RESAMPLE_SHAPE] = sample.shape
+        # metadata is not a dictionary!
+        zooms = list(metadata[MetadataKW.ZOOMS])
 
         if len(zooms) == 2:
             zooms += [1.0]
@@ -279,7 +283,7 @@ class Resample(ImedTransform):
         # Run resampling
         data_out = zoom(sample,
                         zoom=params_resample,
-                        order=1 if metadata['data_type'] == 'gt' else 2)
+                        order=1 if metadata[MetadataKW.DATA_TYPE] == 'gt' else 2)
 
         # Data type
         data_out = data_out.astype(sample.dtype)
@@ -297,7 +301,12 @@ class NormalizeInstance(ImedTransform):
 
     @multichannel_capable
     def __call__(self, sample, metadata=None):
-        data_out = (sample - sample.mean()) / sample.std()
+        # if sample uniform: do mean-subtraction
+        if sample.std() < 1e-5:
+            data_out = (sample - sample.mean())
+        # else: normalize sample
+        else:
+            data_out = (sample - sample.mean()) / sample.std()
         return data_out, metadata
 
 
@@ -411,7 +420,7 @@ class Crop(ImedTransform):
         # Get params
         is_2d = sample.shape[-1] == 1
         th, tw, td = self.size
-        fh, fw, fd, h, w, d = metadata['crop_params'][self.__class__.__name__]
+        fh, fw, fd, h, w, d = metadata[MetadataKW.CROP_PARAMS].get(self.__class__.__name__)
 
         # Crop data
         # Note we use here CroppableArray in order to deal with "out of boundaries" crop
@@ -429,7 +438,7 @@ class Crop(ImedTransform):
         # Get crop params
         is_2d = sample.shape[-1] == 1
         th, tw, td = self.size
-        fh, fw, fd, h, w, d = metadata["crop_params"][self.__class__.__name__]
+        fh, fw, fd, h, w, d = metadata[MetadataKW.CROP_PARAMS].get(self.__class__.__name__)
 
         # Compute params to undo transform
         pad_left = fw
@@ -466,7 +475,7 @@ class CenterCrop(Crop):
         fw = int(round((w - tw) / 2.))
         fd = int(round((d - td) / 2.))
         params = (fh, fw, fd, h, w, d)
-        metadata['crop_params'][self.__class__.__name__] = params
+        metadata[MetadataKW.CROP_PARAMS][self.__class__.__name__] = params
 
         # Call base method
         return super().__call__(sample, metadata)
@@ -481,9 +490,9 @@ class ROICrop(Crop):
     def __call__(self, sample, metadata=None):
         # If crop_params are not in metadata,
         # then we are here dealing with ROI data to determine crop params
-        if self.__class__.__name__ not in metadata['crop_params']:
+        if self.__class__.__name__ not in metadata[MetadataKW.CROP_PARAMS]:
             # Compute center of mass of the ROI
-            h_roi, w_roi, d_roi = center_of_mass(sample.astype(np.int))
+            h_roi, w_roi, d_roi = center_of_mass(sample.astype(int))
             h_roi, w_roi, d_roi = int(round(h_roi)), int(round(w_roi)), int(round(d_roi))
             th, tw, td = self.size
             th_half, tw_half, td_half = int(round(th / 2.)), int(round(tw / 2.)), int(round(td / 2.))
@@ -496,7 +505,7 @@ class ROICrop(Crop):
             # Crop params
             h, w, d = sample.shape
             params = (fh, fw, fd, h, w, d)
-            metadata['crop_params'][self.__class__.__name__] = params
+            metadata[MetadataKW.CROP_PARAMS][self.__class__.__name__] = params
 
         # Call base method
         return super().__call__(sample, metadata)
@@ -526,26 +535,26 @@ class DilateGT(ImedTransform):
             arr_dilated = binary_dilation(arr_bin, iterations=1)
 
             # isolate new voxels, i.e. the ones from the dilation
-            new_voxels = np.logical_xor(arr_dilated, arr_bin).astype(np.int)
+            new_voxels = np.logical_xor(arr_dilated, arr_bin).astype(int)
 
             # assign a soft value (]0, 1[) to the new voxels
             soft_new_voxels = lb * new_voxels
 
             # add the new voxels to the input mask
             arr_soft += soft_new_voxels
-            arr_bin = (arr_soft > 0).astype(np.int)
+            arr_bin = (arr_soft > 0).astype(int)
 
         return arr_bin, arr_soft
 
     def dilate_arr(self, arr, dil_factor):
         # identify each object
-        arr_labeled, lb_nb = label(arr.astype(np.int))
+        arr_labeled, lb_nb = label(arr.astype(int))
 
         # loop across each object
         arr_bin_lst, arr_soft_lst = [], []
         for obj_idx in range(1, lb_nb + 1):
-            arr_bin_obj = (arr_labeled == obj_idx).astype(np.int)
-            arr_soft_obj = np.copy(arr_bin_obj).astype(np.float)
+            arr_bin_obj = (arr_labeled == obj_idx).astype(int)
+            arr_soft_obj = np.copy(arr_bin_obj).astype(float)
             # compute the number of dilation iterations depending on the size of the lesion
             nb_it = int(round(dil_factor * math.sqrt(arr_bin_obj.sum())))
             # values of the voxels added to the input mask
@@ -561,7 +570,7 @@ class DilateGT(ImedTransform):
         # clip values in case dilated voxels overlap
         arr_bin_clip, arr_soft_clip = np.clip(arr_bin_idx, 0, 1), np.clip(arr_soft_idx, 0.0, 1.0)
 
-        return arr_soft_clip.astype(np.float), arr_bin_clip.astype(np.int)
+        return arr_soft_clip.astype(float), arr_bin_clip.astype(int)
 
     @staticmethod
     def random_holes(arr_in, arr_soft, arr_bin):
@@ -581,7 +590,7 @@ class DilateGT(ImedTransform):
         arr_soft_out[new_voxels_xx[idx_to_remove],
                      new_voxels_yy[idx_to_remove],
                      new_voxels_zz[idx_to_remove]] = 0.0
-        arr_bin_out = (arr_soft_out > 0).astype(np.int)
+        arr_bin_out = (arr_soft_out > 0).astype(int)
 
         return arr_soft_out, arr_bin_out
 
@@ -597,7 +606,7 @@ class DilateGT(ImedTransform):
 
         struct = np.ones((3, 3, 1) if arr_soft.shape[2] == 1 else (3, 3, 3))
         # binary closing
-        arr_bin_closed = binary_closing((arr_soft > 0).astype(np.int), structure=struct)
+        arr_bin_closed = binary_closing((arr_soft > 0).astype(int), structure=struct)
         # fill binary holes
         arr_bin_filled = binary_fill_holes(arr_bin_closed)
 
@@ -635,10 +644,10 @@ class BoundingBoxCrop(Crop):
     @multichannel_capable
     @two_dim_compatible
     def __call__(self, sample, metadata):
-        assert 'bounding_box' in metadata
-        x_min, x_max, y_min, y_max, z_min, z_max = metadata['bounding_box']
+        assert MetadataKW.BOUNDING_BOX in metadata
+        x_min, x_max, y_min, y_max, z_min, z_max = metadata[MetadataKW.BOUNDING_BOX]
         x, y, z = sample.shape
-        metadata['crop_params'][self.__class__.__name__] = (x_min, y_min, z_min, x, y, z)
+        metadata[MetadataKW.CROP_PARAMS][self.__class__.__name__] = (x_min, y_min, z_min, x, y, z)
 
         # Call base method
         return super().__call__(sample, metadata)
@@ -702,8 +711,8 @@ class RandomAffine(ImedTransform):
     def __call__(self, sample, metadata=None):
         # Rotation
         # If angle and metadata have been already defined for this sample, then use them
-        if 'rotation' in metadata:
-            angle, axes = metadata['rotation']
+        if MetadataKW.ROTATION in metadata:
+            angle, axes = metadata[MetadataKW.ROTATION]
         # Otherwise, get random ones
         else:
             # Get the random angle
@@ -712,20 +721,20 @@ class RandomAffine(ImedTransform):
             axes = list(random.sample(range(3 if sample.shape[2] > 1 else 2), 2))
             axes.sort()
             # Save params
-            metadata['rotation'] = [angle, axes]
+            metadata[MetadataKW.ROTATION] = [angle, axes]
 
         # Scale
-        if "scale" in metadata:
-            scale_x, scale_y, scale_z = metadata['scale']
+        if MetadataKW.SCALE in metadata:
+            scale_x, scale_y, scale_z = metadata[MetadataKW.SCALE]
         else:
             scale_x = random.uniform(1 - self.scale[0], 1 + self.scale[0])
             scale_y = random.uniform(1 - self.scale[1], 1 + self.scale[1])
             scale_z = random.uniform(1 - self.scale[2], 1 + self.scale[2])
-            metadata['scale'] = [scale_x, scale_y, scale_z]
+            metadata[MetadataKW.SCALE] = [scale_x, scale_y, scale_z]
 
         # Get params
-        if 'translation' in metadata:
-            translations = metadata['translation']
+        if MetadataKW.TRANSLATION in metadata:
+            translations = metadata[MetadataKW.TRANSLATION]
         else:
             self.data_shape = sample.shape
 
@@ -739,7 +748,7 @@ class RandomAffine(ImedTransform):
             else:
                 translations = (0, 0, 0)
 
-            metadata['translation'] = translations
+            metadata[MetadataKW.TRANSLATION] = translations
 
         # Do rotation
         shape = 0.5 * np.array(sample.shape)
@@ -759,7 +768,7 @@ class RandomAffine(ImedTransform):
             raise ValueError("Unknown axes value")
 
         scale = np.array([[1 / scale_x, 0, 0], [0, 1 / scale_y, 0], [0, 0, 1 / scale_z]])
-        if "undo" in metadata and metadata["undo"]:
+        if MetadataKW.UNDO in metadata and metadata[MetadataKW.UNDO]:
             transforms = scale.dot(rotate)
         else:
             transforms = rotate.dot(scale)
@@ -774,16 +783,17 @@ class RandomAffine(ImedTransform):
     @multichannel_capable
     @two_dim_compatible
     def undo_transform(self, sample, metadata=None):
-        assert "rotation" in metadata
-        assert "scale" in metadata
-        assert "translation" in metadata
+        assert MetadataKW.ROTATION in metadata
+        assert MetadataKW.SCALE in metadata
+        assert MetadataKW.TRANSLATION in metadata
         # Opposite rotation, same axes
-        angle, axes = - metadata['rotation'][0], metadata['rotation'][1]
-        scale = 1 / np.array(metadata['scale'])
-        translation = - np.array(metadata['translation'])
+        angle, axes = - metadata[MetadataKW.ROTATION][0], metadata[MetadataKW.ROTATION][1]
+        scale = 1 / np.array(metadata[MetadataKW.SCALE])
+        translation = - np.array(metadata[MetadataKW.TRANSLATION])
 
         # Undo rotation
-        dict_params = {"rotation": [angle, axes], "scale": scale, "translation": [0, 0, 0], "undo": True}
+        dict_params = {MetadataKW.ROTATION: [angle, axes], MetadataKW.SCALE: scale,
+                       MetadataKW.TRANSLATION: [0, 0, 0], MetadataKW.UNDO: True}
 
         data_out, _ = self.__call__(sample, dict_params)
 
@@ -799,17 +809,17 @@ class RandomReverse(ImedTransform):
     @multichannel_capable
     @two_dim_compatible
     def __call__(self, sample, metadata=None):
-        if 'reverse' in metadata:
-            flip_axes = metadata['reverse']
+        if MetadataKW.REVERSE in metadata:
+            flip_axes = metadata[MetadataKW.REVERSE]
         else:
             # Flip axis booleans
             flip_axes = [np.random.randint(2) == 1 for _ in [0, 1, 2]]
             # Save in metadata
-            metadata['reverse'] = flip_axes
+            metadata[MetadataKW.REVERSE] = flip_axes
 
         # Run flip
         for idx_axis, flip_bool in enumerate(flip_axes):
-            if flip_axes:
+            if flip_bool:
                 sample = np.flip(sample, axis=idx_axis).copy()
 
         return sample, metadata
@@ -817,7 +827,7 @@ class RandomReverse(ImedTransform):
     @multichannel_capable
     @two_dim_compatible
     def undo_transform(self, sample, metadata=None):
-        assert "reverse" in metadata
+        assert MetadataKW.REVERSE in metadata
         return self.__call__(sample, metadata)
 
 
@@ -843,16 +853,16 @@ class RandomShiftIntensity(ImedTransform):
             offset = 0.0
 
         # Update metadata
-        metadata['offset'] = offset
+        metadata[MetadataKW.OFFSET] = offset
         # Shift intensity
         data = (sample + offset).astype(sample.dtype)
         return data, metadata
 
     @multichannel_capable
     def undo_transform(self, sample, metadata=None):
-        assert 'offset' in metadata
+        assert MetadataKW.OFFSET in metadata
         # Get offset
-        offset = metadata['offset']
+        offset = metadata[MetadataKW.OFFSET]
         # Substract offset
         data = (sample - offset).astype(sample.dtype)
         return data, metadata
@@ -879,8 +889,8 @@ class ElasticTransform(ImedTransform):
     @two_dim_compatible
     def __call__(self, sample, metadata=None):
         # if params already defined, i.e. sample is GT
-        if "elastic" in metadata:
-            alpha, sigma = metadata["elastic"]
+        if MetadataKW.ELASTIC in metadata:
+            alpha, sigma = metadata[MetadataKW.ELASTIC]
 
         elif np.random.random() < self.p:
             # Get params
@@ -888,12 +898,12 @@ class ElasticTransform(ImedTransform):
             sigma = np.random.uniform(self.sigma_range[0], self.sigma_range[1])
 
             # Save params
-            metadata["elastic"] = [alpha, sigma]
+            metadata[MetadataKW.ELASTIC] = [alpha, sigma]
 
         else:
-            metadata["elastic"] = [None, None]
+            metadata[MetadataKW.ELASTIC] = [None, None]
 
-        if any(metadata["elastic"]):
+        if any(metadata[MetadataKW.ELASTIC]):
             # Get shape
             shape = sample.shape
 
@@ -940,8 +950,8 @@ class AdditiveGaussianNoise(ImedTransform):
 
     @multichannel_capable
     def __call__(self, sample, metadata=None):
-        if "gaussian_noise" in metadata:
-            noise = metadata["gaussian_noise"]
+        if MetadataKW.GAUSSIAN_NOISE in metadata:
+            noise = metadata[MetadataKW.GAUSSIAN_NOISE]
         else:
             # Get random noise
             noise = np.random.normal(self.mean, self.std, sample.shape)
@@ -1009,6 +1019,132 @@ class HistogramClipping(ImedTransform):
         return data, metadata
 
 
+class RandomGamma(ImedTransform):
+    """Randomly changes the contrast of an image by gamma exponential
+
+    Args:
+        log_gamma_range (tuple of floats): Log gamma range for changing contrast. Length equals 2.
+        p (float): Probability of performing the gamma contrast
+    """
+
+    def __init__(self, log_gamma_range, p=0.5):
+        self.log_gamma_range = log_gamma_range
+        self.p = p
+
+    @multichannel_capable
+    @two_dim_compatible
+    def __call__(self, sample, metadata=None):
+        if np.random.random() < self.p:
+            # Get params
+            gamma = np.exp(np.random.uniform(self.log_gamma_range[0], self.log_gamma_range[1]))
+
+            # Save params
+            metadata[MetadataKW.GAMMA] = [gamma]
+
+        else:
+            metadata[MetadataKW.GAMMA] = [None]
+
+        if any(metadata[MetadataKW.GAMMA]):
+            # Suppress the overflow case (due to exponentiation)
+            with np.errstate(over='ignore'):
+                # Apply gamma contrast
+                data_out = np.sign(sample) * (np.abs(sample) ** gamma)
+
+                # Keep data type
+                data_out = data_out.astype(sample.dtype)
+
+                # Clip +/- inf values to the max/min quantization of the native dtype
+                data_out = np.nan_to_num(data_out)
+
+            return data_out, metadata
+
+        else:
+            return sample, metadata
+
+
+class RandomBiasField(ImedTransform):
+    """Applies a random MRI bias field artifact to the image via torchio.RandomBiasField()
+
+        Args:
+            coefficients (float): Maximum magnitude of polynomial coefficients
+            order: Order of the basis polynomial functions
+            p (float): Probability of applying the bias field
+        """
+
+    def __init__(self, coefficients, order, p=0.5):
+        self.coefficients = coefficients
+        self.order = order
+        self.p = p
+
+    @multichannel_capable
+    @two_dim_compatible
+    def __call__(self, sample, metadata=None):
+        if np.random.random() < self.p:
+            # Get params
+            random_bias_field = tio.Compose([tio.RandomBiasField(coefficients=self.coefficients,
+                                                                 order=self.order,
+                                                                 p=self.p)])
+
+            # Save params
+            metadata[MetadataKW.BIAS_FIELD] = [random_bias_field]
+
+        else:
+            metadata[MetadataKW.BIAS_FIELD] = [None]
+
+        if any(metadata[MetadataKW.BIAS_FIELD]):
+            # Apply random bias field
+            data_out, history = tio_transform(x=sample, transform=random_bias_field)
+
+            # Keep data type
+            data_out = data_out.astype(sample.dtype)
+
+            # Update metadata to history
+            metadata[MetadataKW.BIAS_FIELD] = [history]
+
+            return data_out, metadata
+
+        else:
+            return sample, metadata
+
+
+class RandomBlur(ImedTransform):
+    """Applies a random blur to the image
+
+        Args:
+            sigma_range (tuple of floats): Standard deviation range for the gaussian filter
+            p (float): Probability of performing blur
+        """
+
+    def __init__(self, sigma_range, p=0.5):
+        self.sigma_range = sigma_range
+        self.p = p
+
+    @multichannel_capable
+    @two_dim_compatible
+    def __call__(self, sample, metadata=None):
+        if np.random.random() < self.p:
+            # Get params
+            sigma = np.random.uniform(self.sigma_range[0], self.sigma_range[1])
+
+            # Save params
+            metadata[MetadataKW.BLUR] = [sigma]
+
+        else:
+            metadata[MetadataKW.BLUR] = [None]
+
+        if any(metadata[MetadataKW.BLUR]):
+            # Apply random blur
+            data_out = gaussian_filter(sample, sigma)
+
+            # Keep data type
+            data_out = data_out.astype(sample.dtype)
+
+            return data_out, metadata
+
+        else:
+            return sample, metadata
+
+
 def get_subdatasets_transforms(transform_params):
     """Get transformation parameters for each subdataset: training, validation and testing.
 
@@ -1048,7 +1184,7 @@ def get_preprocessing_transforms(transforms):
     original_transforms = copy.deepcopy(transforms)
     preprocessing_transforms = copy.deepcopy(transforms)
     for idx, tr in enumerate(original_transforms):
-        if tr == "Resample" or tr == "CenterCrop" or tr == "ROICrop":
+        if tr == TransformationKW.RESAMPLE or tr == TransformationKW.CENTERCROP or tr == TransformationKW.ROICROP:
             del transforms[tr]
         else:
             del preprocessing_transforms[tr]
@@ -1056,7 +1192,7 @@ def get_preprocessing_transforms(transforms):
     return preprocessing_transforms
 
 
-def apply_preprocessing_transforms(transforms, seg_pair, roi_pair=None):
+def apply_preprocessing_transforms(transforms, seg_pair, roi_pair=None) -> Tuple[dict, dict]:
     """
     Applies preprocessing transforms to segmentation pair (input, gt and metadata).
 
@@ -1093,16 +1229,16 @@ def apply_preprocessing_transforms(transforms, seg_pair, roi_pair=None):
     seg_pair = {
         'input': stack_input,
         'gt': stack_gt,
-        'input_metadata': metadata_input,
-        'gt_metadata': metadata_gt
+        MetadataKW.INPUT_METADATA: metadata_input,
+        MetadataKW.GT_METADATA: metadata_gt
     }
 
     if roi_pair is not None and len(roi_pair['gt']):
         roi_pair = {
             'input': stack_input,
             'gt': stack_roi,
-            'input_metadata': metadata_input,
-            'gt_metadata': metadata_roi
+            MetadataKW.INPUT_METADATA: metadata_input,
+            MetadataKW.GT_METADATA: metadata_roi
         }
     return (seg_pair, roi_pair)
 
@@ -1127,3 +1263,19 @@ def prepare_transforms(transform_dict, requires_undo=True):
     transforms = Compose(transform_dict, requires_undo=requires_undo)
     tranform_lst = [prepro_transforms if len(preprocessing_transforms) else None, transforms]
     return tranform_lst, training_undo_transform
+
+
+def tio_transform(x, transform):
+    """
+    Applies TorchIO transformations to a given image and returns the transformed image and history.
+
+    Args:
+        x (np.ndarray): input image
+        transform (tio.transforms.Transform): TorchIO transform
+
+    Returns:
+        np.ndarray, list: transformed image, history of parameters used for the applied transformation
+    """
+    tio_subject = tio.Subject(input=tio.ScalarImage(tensor=x[np.newaxis, ...]))
+    transformed = transform(tio_subject)
+    return transformed.input.numpy()[0], transformed.get_composed_history()

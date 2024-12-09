@@ -180,11 +180,11 @@ class GeneralizedDiceLoss(nn.Module):
 
     Args:
         epsilon (float): Epsilon to avoid division by zero.
-        include_background (float): If True, then an extra channel is added, which represents the background class.
+        include_background (bool): If True, then an extra channel is added, which represents the background class.
 
     Attributes:
         epsilon (float): Epsilon to avoid division by zero.
-        include_background (float): If True, then an extra channel is added, which represents the background class.
+        include_background (bool): If True, then an extra channel is added, which represents the background class.
     """
 
     def __init__(self, epsilon=1e-5, include_background=True):
@@ -202,8 +202,8 @@ class GeneralizedDiceLoss(nn.Module):
             input_background = torch.zeros(size_background, dtype=input.dtype)
             target_background = torch.zeros(size_background, dtype=target.dtype)
             # fill with opposite
-            input_background[input.sum(1).expand_as(input_background) == 0] = 1
-            target_background[target.sum(1).expand_as(input_background) == 0] = 1
+            input_background[input.sum(1)[:, None, :, :] == 0] = 1
+            target_background[target.sum(1)[:, None, :, :] == 0] = 1
             # Concat
             input = torch.cat([input, input_background.to(input.device)], dim=1)
             target = torch.cat([target, target_background.to(target.device)], dim=1)
@@ -381,19 +381,19 @@ class AdapWingLoss(nn.Module):
         hm_num = target.size()[1]
 
         mask = torch.zeros_like(target)
-        kernel = scipy.ndimage.morphology.generate_binary_structure(2, 2)
+        kernel = scipy.ndimage.generate_binary_structure(2, 2)
         # For 3D segmentation tasks
         if len(input.shape) == 5:
-            kernel = scipy.ndimage.morphology.generate_binary_structure(3, 2)
+            kernel = scipy.ndimage.generate_binary_structure(3, 2)
 
         for i in range(batch_size):
             img_list = list()
             img_list.append(np.round(target[i].cpu().numpy() * 255))
             img_merge = np.concatenate(img_list)
-            img_dilate = scipy.ndimage.morphology.binary_opening(img_merge, np.expand_dims(kernel, axis=0))
+            img_dilate = scipy.ndimage.binary_opening(img_merge, np.expand_dims(kernel, axis=0))
             img_dilate[img_dilate < 51] = 1  # 0*omega+1
             img_dilate[img_dilate >= 51] = 1 + self.omega  # 1*omega+1
-            img_dilate = np.array(img_dilate, dtype=np.int)
+            img_dilate = np.array(img_dilate, dtype=int)
 
             mask[i] = torch.tensor(img_dilate)
 

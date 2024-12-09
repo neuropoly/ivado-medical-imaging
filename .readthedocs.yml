@@ -5,17 +5,20 @@
 # Required
 version: 2
 
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.10"
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/source/conf.py
 
 python:
-  version: 3.7
   install:
-    # Ensure the Find External Link PyTorch version is installed
-    - requirements: requirements_dev.txt
     # Install IvadoMed package via setup.py content
     - method: pip
       path: .
       extra_requirements:
-        - docs
+        - dev

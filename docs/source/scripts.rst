@@ -8,6 +8,11 @@ Scripts
 This section contains a collection of useful scripts for quality control during
 the training of models.
 
+ivadomed_segment_image
+""""""""""""""""""""""
+
+.. autofunction:: ivadomed.scripts.segment_image.segment_image
+
 ivadomed_visualize_transforms
 """""""""""""""""""""""""""""
 

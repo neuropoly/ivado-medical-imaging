@@ -1,0 +1,40 @@
+########################################################################################################
+# config.yml: Configuration parameters for sct_run_batch
+#
+# Usage: "sct_run_batch -script process_data.sh -config config.yml"
+#
+# Each "key: value" entry in this file corresponds to an input argument for 'sct_run_batch'. For example,
+# you could call "sct_run_batch -path-data ./data -path-output ./output [...]" for all of the arguments,
+# and you would get the same results. However, we strongly recommend using a config file like this one,
+# as it will help with reproducibility.
+########################################################################################################
+
+# Path to the folder containing the BIDS dataset
+path_data: "/home/julien/data-multi-subject/"
+
+# Path to save the output to. This path is what determines the following subdirectory environment variables:
+#   - PATH_DATA_PROCESSED: <path_output>/data_processed
+#   - PATH_RESULTS:        <path_output>/results
+#   - PATH_QC:             <path_output>/qc
+#   - PATH_LOG:            <path_output>/log
+# You can then use these subdirectory environment variables to direct the output for your batch processing script.
+path_output: "/home/julien/data-multi-subject/derivatives"
+
+# Location of manually-corrected segmentations
+path_segmanual: "/home/julien/data-multi-subject/derivatives/seg_manual"
+
+# If each subject folder starts with a prefix, indicate it here. Otherwise, set to ""
+subject_prefix: "sub-"
+
+# If you want to process only specific subjects, uncomment the line below:
+#include-list: sub-01 sub-05
+# If you want to exclude specific subjects, uncomment the line below
+#exclude-list: sub-03 sub-07
+
+# Number of jobs for parallel processing
+# To know the number of available cores, run: getconf _NPROCESSORS_ONLN
+# We recommend not using more than half the number of available cores.
+jobs: 4
+
+# Number of jobs for ANTs routine. Set to 1 if ANTs functions crash when CPU saturates.
+#itk_threads: 1

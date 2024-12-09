@@ -12,9 +12,10 @@
 # IMPORTS
 import os
 
+from ivadomed.loader.bids_dataframe import BidsDataframe
 from ivadomed import config_manager as imed_config_manager
-from ivadomed.loader import utils as imed_loader_utils
 
+from loguru import logger
 
 # GET LOADER PARAMETERS FROM IVADOMED CONFIG FILE
 # The loader parameters have 2 new fields: "bids_config" and "extensions".
@@ -36,13 +37,13 @@ derivatives = True
 # CREATE OUTPUT PATH
 path_output = context["path_output"]
 if not os.path.isdir(path_output):
-    print('Creating output path: {}'.format(path_output))
+    logger.info(f"Creating output path: {path_output}")
     os.makedirs(path_output)
 else:
-    print('Output path already exists: {}'.format(path_output))
+    logger.warning(f"Output path already exists: {path_output}")
 
 # CREATE BIDSDataframe OBJECT
-bids_df = imed_loader_utils.BidsDataframe(loader_params, path_output, derivatives)
+bids_df = BidsDataframe(loader_params, path_output, derivatives)
 df = bids_df.df
 
 # DROP "path" COLUMN AND SORT BY FILENAME FOR TESTING PURPOSES WITH data-testing
@@ -52,4 +53,4 @@ df = df.sort_values(by=['filename']).reset_index(drop=True)
 # SAVE DATAFRAME TO CSV FILE FOR data-testing
 path_csv = "test_df_new_loader.csv"
 df.to_csv(path_csv, index=False)
-print(df)
+logger.debug(df)

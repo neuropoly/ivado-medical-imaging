@@ -1,7 +1,7 @@
-import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from pathlib import Path
 
 
 def mixup(data, targets, alpha, debugging=False, ofolder=None):
@@ -27,7 +27,7 @@ def mixup(data, targets, alpha, debugging=False, ofolder=None):
 
     lambda_ = np.random.beta(alpha, alpha)
     lambda_ = max(lambda_, 1 - lambda_)  # ensure lambda_ >= 0.5
-    lambda_tensor = torch.FloatTensor([lambda_])
+    lambda_tensor = torch.FloatTensor([lambda_]).to(data.device)
 
     data = data * lambda_tensor + data2 * (1 - lambda_tensor)
     targets = targets * lambda_tensor + targets2 * (1 - lambda_tensor)
@@ -48,17 +48,17 @@ def save_mixup_sample(ofolder, input_data, labeled_data, lambda_tensor):
         lambda_tensor (Tensor):
     """
     # Mixup folder
-    mixup_folder = os.path.join(ofolder, 'mixup')
-    if not os.path.isdir(mixup_folder):
-        os.makedirs(mixup_folder)
+    mixup_folder = Path(ofolder, 'mixup')
+    if not mixup_folder.is_dir():
+        mixup_folder.mkdir(parents=True)
     # Random sample
     random_idx = np.random.randint(0, input_data.size()[0])
     # Output fname
-    ofname = str(lambda_tensor.data.numpy()[0]) + '_' + str(random_idx).zfill(3) + '.png'
-    ofname = os.path.join(mixup_folder, ofname)
+    ofname = str(lambda_tensor.cpu().data.numpy()[0]) + '_' + str(random_idx).zfill(3) + '.png'
+    ofname = Path(mixup_folder, ofname)
     # Tensor to Numpy
-    x = input_data.data.numpy()[random_idx, 0, :, :]
-    y = labeled_data.data.numpy()[random_idx, 0, :, :]
+    x = input_data.cpu().data.numpy()[random_idx, 0, :, :]
+    y = labeled_data.cpu().data.numpy()[random_idx, 0, :, :]
     # Plot
     plt.figure(figsize=(20, 10))
     plt.subplot(1, 2, 1)

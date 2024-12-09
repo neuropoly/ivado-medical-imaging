@@ -9,32 +9,24 @@
 ###########################################################################################################
 
 import matplotlib
+from matplotlib import pyplot as plt
 import pandas as pd
-import os
 import numpy as np
 import itertools
 import seaborn as sns
 from scipy.stats import ks_2samp
 from ivadomed.utils import init_ivadomed
+from pathlib import Path
+from loguru import logger
 import argparse
+
 matplotlib.rcParams['toolbar'] = 'None'  # Remove buttons
 
-gui_env = ['TKAgg', 'GTKAgg', 'Qt4Agg', 'WXAgg']
-selected_gui_env = []
-for gui in gui_env:
-    try:
-        matplotlib.use(gui)
-        from matplotlib import pyplot as plt
-        selected_gui_env = gui
-        break
-    except:
-        continue
-# If none works
-if selected_gui_env == []:
-    from matplotlib import pyplot as plt
-    print("No backend can be used - Visualization will fail")
+if matplotlib.get_backend() == "agg":
+    logger.warning("No backend can be used - Visualization will fail")
 else:
-    print("Using:", matplotlib.get_backend() + " gui")
+    logger.info(f"Using: {matplotlib.get_backend()}  gui")
+
 
 # ---------------------------------------------------------------------------------------------------------------------#
 
@@ -45,14 +37,13 @@ def get_parser():
                         help="List of log folders from different models.")
     parser.add_argument("--metric", default='dice_class0', nargs=1, type=str, dest="metric",
                         help="Metric from evaluation_3Dmetrics.csv to base the plots on.")
-    parser.add_argument("--metadata", required=False,  nargs=2, type=str, dest="metadata",
+    parser.add_argument("--metadata", required=False, nargs=2, type=str, dest="metadata",
                         help="Selection based on metadata from participants.tsv:"
                              "(1) Label from column (2) string to match")
     return parser
 
 
 def onclick(event, df):
-
     # Get the index of the selected violinplot datapoint
     # WARNING: More than one can be selected if they are very close to each other
     #          If that's the case, all will be displayed
@@ -66,7 +57,8 @@ def onclick(event, df):
 
         # Remove the previously displayed subject(s)
         # This also takes care of the case where more than one subjects are displayed
-        while len(fig.texts) > nfolders+np.math.factorial(nfolders)/(np.math.factorial(2)*np.math.factorial(nfolders-2)):
+        while len(fig.texts) > nfolders + np.math.factorial(nfolders) / (
+                np.math.factorial(2) * np.math.factorial(nfolders - 2)):
             fig.texts.pop()
 
         # This is a hack to find the index of the Violinplot - There should be another way to get this from the
@@ -77,7 +69,7 @@ def onclick(event, df):
         selected_output_folder = df[df["EvaluationModel"] == output_folders[i_output_folder]]
 
         for iSubject in range(0, len(clicked_index.tolist())):
-            frame = plt.text(event.mouseevent.xdata, -0.08 - 0.08*iSubject + event.mouseevent.ydata,
+            frame = plt.text(event.mouseevent.xdata, -0.08 - 0.08 * iSubject + event.mouseevent.ydata,
                              selected_output_folder["subject"][clicked_index[iSubject]], size=10,
                              ha="center", va="center",
                              bbox=dict(facecolor='red', alpha=0.5)
@@ -124,52 +116,55 @@ def visualize_and_compare_models(ofolders, metric="dice_class0", metadata=None):
     """
 
     # access CLI options
-    print("ofolders: %r" % ofolders)
-    print("metric: %r" % metric)
+    logger.debug(f"ofolders: {ofolders}")
+    logger.debug(f"metric: {metric}")
     if metadata is None:
         metadata = []
     if metadata:
-        print("metadata: %r" % metadata)
+        logger.debug(f"metadata: {metadata}")
 
     # Do a quick check that all the required files are present
     for folder in ofolders:
-        if not os.path.exists(os.path.join(folder, 'results_eval', 'evaluation_3Dmetrics.csv')):
-            print('evaluation_3Dmetrics.csv file is not present within ' + os.path.join(folder, 'results_eval'))
+        if not Path(folder, 'results_eval', 'evaluation_3Dmetrics.csv').exists():
+            logger.error(f"evaluation_3Dmetrics.csv file is not present within {Path(folder, 'results_eval')}")
             raise Exception('evaluation_3Dmetrics.csv missing')
-        if not os.path.exists(os.path.join(folder, 'bids_dataframe.csv')):
-            print('bids_dataframe.csv file is not present within ' + folder)
+        if not Path(folder, 'bids_dataframe.csv').exists():
+            logger.error(f"bids_dataframe.csv file is not present within {folder}")
             raise Exception('bids_dataframe.csv missing')
 
     if len(ofolders) < 1:
         raise Exception('No folders were selected - Nothing to show')
 
-    columnNames = ["EvaluationModel", metric, 'subject']
-    df = pd.DataFrame([], columns=columnNames)
-
+    np_lst = []
     for folder in ofolders:
-        result = pd.read_csv(os.path.join(folder, 'results_eval', 'evaluation_3Dmetrics.csv'))
+        result = pd.read_csv(str(Path(folder, 'results_eval', 'evaluation_3Dmetrics.csv')))
 
         if metadata:
-            participant_metadata = pd.read_table(os.path.join(folder, 'bids_dataframe.csv'), sep=',')
+            participant_metadata = pd.read_table(str(Path(folder, 'bids_dataframe.csv')), sep=',')
             # Select only the subjects that satisfy the --metadata input
-            selected_subjects = participant_metadata[participant_metadata[metadata[0]] == metadata[1]]["filename"].tolist()
+            selected_subjects = participant_metadata[participant_metadata[metadata[0]] == metadata[1]][
+                "filename"].tolist()
             selected_subjects = [i.replace(".nii.gz", "") for i in selected_subjects]
 
             # Now select only the scores from these subjects
             result_subject_ids = result["image_id"]
-            result = result.iloc[[i for i in range(len(result_subject_ids)) if result_subject_ids[i] in selected_subjects]]
+            result = result.iloc[
+                [i for i in range(len(result_subject_ids)) if result_subject_ids[i] in selected_subjects]]
 
             if result.empty:
-                print('No subject meet the selected criteria - skipping plot for: ' + folder)
+                logger.warning(f"No subject meet the selected criteria - skipping plot for: {folder}")
 
         if not result.empty:
             scores = result[metric]
 
-            folders = [os.path.basename(os.path.normpath(folder))] * len(scores)
+            folders = [Path(folder).resolve().name] * len(scores)
             subject_id = result["image_id"]
-            combined = np.column_stack((folders, scores.astype(np.object, folders), subject_id)).T
-            singleFolderDF = pd.DataFrame(combined, columnNames).T
-            df = df.append(singleFolderDF, ignore_index=True)
+            combined = np.column_stack((folders, scores.astype(np.object, folders), subject_id))
+            np_lst.append(combined)
+
+    columnNames = ["EvaluationModel", metric, 'subject']
+    rows = np.vstack(np_lst)
+    df = pd.DataFrame(rows, columns=columnNames)
 
     nFolders = len(ofolders)
     combinedNumbers = list(itertools.combinations(range(nFolders), 2))
@@ -189,17 +184,15 @@ def visualize_and_compare_models(ofolders, metric="dice_class0", metadata=None):
         # Display the mean performance on top of every violinplot
         for i in range(len(ofolders)):
             # This will be used to plot the mean value on top of each individual violinplot
-            temp = df[metric][df['EvaluationModel'] == os.path.basename(os.path.normpath(ofolders[i]))]
+            temp = df[metric][df['EvaluationModel'] == Path(ofolders[i]).resolve().name]
             plt.text(i, df[metric].max() + 0.07, str((100 * temp.mean()).round() / 100), ha='center', va='top',
                      color='r', picker=True)
 
         if len(ofolders) > 1 and len(ofolders) < 5:
             # Perform a Kolmogorov–Smirnov test for all combinations of results & connect the corresponding Violinplots
             for i in range(len(combinedNumbers)):
-                dataX = df[metric][df['EvaluationModel'] ==
-                                        os.path.basename(os.path.normpath(combinedFolders[i][0]))]
-                dataY = df[metric][df['EvaluationModel'] ==
-                                        os.path.basename(os.path.normpath(combinedFolders[i][1]))]
+                dataX = df[metric][df['EvaluationModel'] == Path(combinedFolders[i][0]).resolve().name]
+                dataY = df[metric][df['EvaluationModel'] == Path(combinedFolders[i][1]).resolve().name]
 
                 ks_test = ks_2samp(dataX, dataY)
 
@@ -230,8 +223,8 @@ def visualize_and_compare_models(ofolders, metric="dice_class0", metadata=None):
         plt.show(block=True)
 
     else:
-        print('No subjects meet the criteria selected for any model. '
-              'Probably you need to change the --metadata / --metric selection')
+        logger.warning("No subjects meet the criteria selected for any model. "
+                       "Probably you need to change the --metadata / --metric selection")
 
 
 def main():

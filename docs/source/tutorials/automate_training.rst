@@ -81,7 +81,7 @@ Step 5: Run the Code
 Default
 ^^^^^^^
 
-If neither ``all_combin`` nor ``multi_params`` is selected, then the hyperparameters will be
+If neither ``all-combin`` nor ``multi-params`` is selected, then the hyperparameters will be
 combined as follows into a ``config_list``.
 
 .. note::
@@ -108,7 +108,7 @@ To run this:
 All Combinations
 ^^^^^^^^^^^^^^^^
 
-If the flag ``all_combin`` is selected, the hyperparameter options will be combined
+If the flag ``all-combin`` is selected, the hyperparameter options will be combined
 combinatorically.
 
 .. code-block::
@@ -135,12 +135,12 @@ To run:
 .. code-block:: bash
 
     ivadomed_automate_training -c config.json -ch config_hyper.json \
-    -n 1 --all_combin
+    -n 1 --all-combin
 
 Multiple Parameters
 ^^^^^^^^^^^^^^^^^^^
 
-If the flag ``multi_params`` is selected, the elements from each hyperparameter list will be
+If the flag ``multi-params`` is selected, the elements from each hyperparameter list will be
 selected sequentially, so all the first elements, then all the second elements, etc. If the lists
 are different lengths, say ``len(list_a) = n`` and ``len(list_b) = n+m``, where ``n`` and ``m``
 are strictly positive integers, then we will only use the first ``n`` elements.
@@ -155,7 +155,7 @@ To run:
 .. code-block:: bash
 
     ivadomed_automate_training -c config.json -ch config_hyper.json \
-    -n 1 --multi_params
+    -n 1 --multi-params
 
 Step 6: Results
 ---------------

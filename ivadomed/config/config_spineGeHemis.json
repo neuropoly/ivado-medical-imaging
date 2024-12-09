@@ -4,6 +4,13 @@
     "path_output": "HeMIS",
     "model_name": "seg_tumor_t2_t1",
     "debugging": false,
+    "wandb": {
+        "wandb_api_key": "",
+        "project_name": "my_project",
+        "group_name": "my_group",
+        "run_name": "run-1",
+        "log_grads_every": 100
+    },
     "loader_parameters": {
         "path_data": ["data_example_spinegeneric"],
         "target_suffix": ["_seg"],
@@ -103,8 +110,8 @@
     "transformation": {
         "Resample":
         {
-            "wspace": 0.75,
             "hspace": 0.75,
+            "wspace": 0.75,
             "dspace": 1
         },
         "CenterCrop": {

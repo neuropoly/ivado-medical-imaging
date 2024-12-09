@@ -16,14 +16,11 @@ set -e
 
 # Retrieve input params
 SUBJECT=$1
-FILEPARAM=$2
-
-source $FILEPARAM
 
 # Create BIDS architecture
-PATH_IN="`pwd`/${SUBJECT}/anat"
-ofolder_seg="${PATH_RESULTS}/derivatives/labels/${SUBJECT}/anat"
-ofolder_reg="${PATH_RESULTS}/${SUBJECT}/anat"
+PATH_IN="${PATH_DATA}/${SUBJECT}/anat"
+ofolder_seg="${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat"
+ofolder_reg="${PATH_DATA_PROCESSED}/${SUBJECT}/anat"
 
 # Set filenames
 file_t1w_mts="${SUBJECT}_acq-T1w_MTS"

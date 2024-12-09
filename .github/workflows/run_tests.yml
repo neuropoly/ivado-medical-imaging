@@ -8,9 +8,33 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+      - '**.bib'
+      - '.github/**'
+      - '!.github/workflows/run_tests.yml'
+      - 'dev/**'
+      - 'docs/**'
+      - 'images/**'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - '.readthedocs.yml'
   # Trigger the workflow on pull requests, but reveal no secrets, do not use pull_request_target, see:
   # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+      - '**.bib'
+      - '.github/**'
+      - '!.github/workflows/run_tests.yml'
+      - 'dev/**'
+      - 'docs/**'
+      - 'images/**'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - '.readthedocs.yml'
 
 env:
   # Even when given -y, apt will still sometimes hang at a prompt if a package
@@ -19,13 +43,15 @@ env:
   # (TravisCI quietly defined this on all their platforms, but we have to give it manually on GithubCI.)
   DEBIAN_FRONTEND: 'noninteractive'
   HDF5_USE_FILE_LOCKING: 'FALSE'
+  # Skip to the headless matplotlib renderer, which is less
+  # bug-prone in the constrained environment of CI
+  # Tip from a matplotlib dev: https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/3388#issuecomment-846091012
+  # Ref: https://matplotlib.org/stable/users/explain/backends.html
+  MPLBACKEND: 'Agg'
 
 jobs:
   ultra_matrix_test:
     name: Matrix Test of Python ${{ matrix.python-version }} on ${{ matrix.os }}
-
-    # Matrix driven OS
-    runs-on: ${{ matrix.os }}
 
     # Default shell for ALL subsequent steps.
     defaults:
@@ -39,32 +65,34 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ "macos-latest", "windows-latest", "ubuntu-18.04", "ubuntu-20.04",  "macos-10.15" ]
-        python-version: [ 3.6, 3.7, 3.8 ]
+        os: [ "macos-latest", "windows-latest", "ubuntu-20.04" ]
+        python-version: [ '3.8', '3.9', '3.10' ]
         test-name:
           - integration-test
+
+    # Matrix driven OS
+    runs-on: ${{ matrix.os }}
 
     # Main steps for the test to be reproduced across OS x Python
     steps:
       # Step 0: Checkout code.
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Step 1: Setup python version
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Step 2: Install requirement dependencies.
-      - name: Install dependencies
-        uses: py-actions/py-dependency-install@v2
-        with:
-          path: "requirements_dev.txt"
-
-      # Step 3: install additional pytest/dev related dependencies
-      - name: Install IvadoMed Main Modules
+      # Step 2: Install dependencies
+      - name: Install ivadomed
         run: |
-          pip install -e .
+          pip install -e .[dev]
+
+      # Step 3: List installed packages
+      - name: List installed packages
+        run: |
+          pip list
 
       # Step 4: Lint.
       - name: Lint with flake8

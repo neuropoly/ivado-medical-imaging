@@ -1,9 +1,9 @@
 from ivadomed import visualize as imed_visualize
 import numpy as np
 import torch
-import os
 from testing.unit_tests.t_utils import create_tmp_dir,  __data_testing_dir__, __tmp_dir__, download_data_testing_test_files
 from testing.common_testing_util import remove_tmp_dir
+from pathlib import Path
 
 def setup_function():
     create_tmp_dir()
@@ -20,10 +20,10 @@ def test_save_rgb(download_data_testing_test_files):
     imed_visualize.save_color_labels(
         gt_data=image_n,
         binarize=False,
-        gt_filename=os.path.join(
+        gt_filename=str(Path(
             __data_testing_dir__,
-            "rgb_test_file.nii.gz"),
-        output_filename=os.path.join(__tmp_dir__, "rgb_test.nii.gz"),
+            "rgb_test_file.nii.gz")),
+        output_filename=str(Path(__tmp_dir__, "rgb_test.nii.gz")),
         slice_axis=0
     )
 

@@ -13,12 +13,8 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 # Retrieve input params
 SUBJECT=$1
-SITE=$2
-PATH_RESULTS=$3
-PATH_QC=$4
-PATH_LOG=$5
 
-cd ${SUBJECT}/anat
+cd ${SUBJECT}/anat || exit
 rm straightening.cache
 rm ${SUBJECT}_acq-T1w_MTS_seg.nii.gz
 rm ${SUBJECT}_T1w_seg.nii.gz

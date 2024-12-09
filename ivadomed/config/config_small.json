@@ -89,8 +89,8 @@
     "transformation": {
         "Resample":
         {
-            "wspace": 0.75,
             "hspace": 0.75,
+            "wspace": 0.75,
             "dspace": 1
         },
         "CenterCrop": {

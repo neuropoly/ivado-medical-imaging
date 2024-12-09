@@ -16,6 +16,7 @@ from copy import deepcopy
 # from sklearn.metrics import auc
 import matplotlib.pyplot as plt
 from scipy.ndimage import label, generate_binary_structure
+from loguru import logger
 
 from ivadomed import config_manager as imed_config_manager
 from ivadomed import main as imed
@@ -81,17 +82,17 @@ def print_unc_stats(unc_name, pred_folder, im_lst):
             p75s.append(np.percentile(vals, 75))
 
     for n, l in zip(['min', 'max', 'p25', 'p50', 'p75'], [mins, maxs, p25s, p50s, p75s]):
-        print('\t{}: {}'.format(n, np.mean(l)))
+        logger.debug(f"\t{n}: {np.mean(l)}")
 
 
 def count_retained(data_before, data_after, level):
     if level == 'vox':
         cmpt_before, cmpt_after = np.count_nonzero(data_before), np.count_nonzero(data_after)
     else:  # level == 'obj'
-        print(np.sum(data_before), np.sum(data_after))
+        logger.debug(f"{np.sum(data_before)} {np.sum(data_after)}")
         _, cmpt_before = label(data_before, structure=BIN_STRUCT)
         _, cmpt_after = label(data_after, structure=BIN_STRUCT)
-        print(cmpt_before, cmpt_after)
+        logger.debug(f"{cmpt_before} {cmpt_after}")
     percent_rm = (cmpt_before - cmpt_after) * 100. / cmpt_before
     return 100. - percent_rm
 
@@ -122,7 +123,7 @@ def run_experiment(level, unc_name, thr_unc_lst, thr_pred_lst, gt_folder, pred_f
         if os.path.isfile(fname_gt):
             nib_gt = nib.load(fname_gt)
             data_gt = nib_gt.get_data()
-            print(np.sum(data_gt))
+            logger.debug(np.sum(data_gt))
             # soft prediction
             data_soft = np.mean(data_pred_lst, axis=0)
 
@@ -133,7 +134,7 @@ def run_experiment(level, unc_name, thr_unc_lst, thr_pred_lst, gt_folder, pred_f
                     data_soft_thrUnc[data_unc > thr_unc] = 0
                     cmpt = count_retained((data_soft > 0).astype(np.int), (data_soft_thrUnc > 0).astype(np.int), level)
                     res_dct['retained_elt'][i_unc].append(cmpt)
-                    print(thr_unc, cmpt)
+                    logger.debug(f"{thr_unc} {cmpt}")
                     for i_pred, thr_pred in enumerate(thr_pred_lst):
                         data_hard = imed_postpro.threshold_predictions(deepcopy(data_soft_thrUnc), thr=thr_pred)\
                                                 .astype(np.uint8)
@@ -149,8 +150,8 @@ def run_experiment(level, unc_name, thr_unc_lst, thr_pred_lst, gt_folder, pred_f
                         else:
                             tpr, _ = eval.get_ltpr()
                             fdr = eval.get_lfdr()
-                        print(thr_pred, np.count_nonzero(deepcopy(data_soft_thrUnc)), np.count_nonzero(data_hard), tpr,
-                              fdr)
+                        logger.debug(f"{thr_pred} {np.count_nonzero(deepcopy(data_soft_thrUnc))} "
+                                     f"{np.count_nonzero(data_hard)} {tpr} {fdr}")
                         res_dct['tpr'][i_unc][i_pred].append(tpr / 100.)
                         res_dct['fdr'][i_unc][i_pred].append(fdr / 100.)
 
@@ -158,15 +159,15 @@ def run_experiment(level, unc_name, thr_unc_lst, thr_pred_lst, gt_folder, pred_f
 
 
 def print_retained_elt(thr_unc_lst, retained_elt_lst):
-    print('Mean percentage of retained elt:')
+    logger.info('Mean percentage of retained elt:')
     for i, t in enumerate(thr_unc_lst):
-        print('\tUnc threshold: {} --> {}'.format(t, np.mean(retained_elt_lst[i])))
+        logger.info(f"\tUnc threshold: {t} --> {np.mean(retained_elt_lst[i])}")
 
 
 def plot_roc(thr_unc_lst, thr_pred_lst, res_dct, metric, fname_out):
     plt.figure(figsize=(10, 10))
     for i_unc, thr_unc in enumerate(thr_unc_lst):
-        print('Unc Thr: {}'.format(thr_unc))
+        logger.info(f"Unc Thr: {thr_unc}")
 
         tpr_vals = np.array([np.nanmean(res_dct['tpr'][i_unc][i_pred]) for i_pred in range(len(thr_pred_lst))])
         fdr_vals = np.array([np.nanmean(res_dct['fdr'][i_unc][i_pred]) for i_pred in range(len(thr_pred_lst))])
@@ -175,7 +176,7 @@ def plot_roc(thr_unc_lst, thr_pred_lst, res_dct, metric, fname_out):
 
         optimal_idx = np.argmax(tpr_vals - fdr_vals)
         optimal_threshold = thr_pred_lst[optimal_idx]
-        print('AUC: {}, Optimal Pred Thr: {}'.format(auc_, optimal_threshold))
+        logger.info(f"AUC: {auc_}, Optimal Pred Thr: {optimal_threshold}")
 
         plt.scatter(fdr_vals, tpr_vals, label='Unc thr={0:0.2f} (area = {1:0.2f})'.format(thr_unc, auc_), s=22)
 
@@ -191,13 +192,13 @@ def plot_roc(thr_unc_lst, thr_pred_lst, res_dct, metric, fname_out):
 
 
 def run_inference(pred_folder, im_lst, thr_pred, gt_folder, target_suf, param_eval, unc_name=None, thr_unc=None):
-    # init df
-    df_results = pd.DataFrame()
+    # init df row list
+    df_lst = []
 
     # loop across images
     for fname_pref in im_lst:
         if not any(elem is None for elem in [unc_name, thr_unc]):
-            print(thr_unc)
+            logger.debug(thr_unc)
             # uncertainty map
             fname_unc = os.path.join(pred_folder, fname_pref + unc_name + '.nii.gz')
             im = nib.load(fname_unc)
@@ -220,7 +221,7 @@ def run_inference(pred_folder, im_lst, thr_pred, gt_folder, target_suf, param_ev
         data_soft = np.mean(data_pred_lst, axis=0)
 
         if not any(elem is None for elem in [unc_name, thr_unc]):
-            print('thr')
+            logger.debug("thr")
             # discard uncertain lesions from data_soft
             data_soft[data_unc > thr_unc] = 0
 
@@ -235,8 +236,9 @@ def run_inference(pred_folder, im_lst, thr_pred, gt_folder, target_suf, param_ev
 
         # save results of this fname_pred
         results_pred['image_id'] = fname_pref.split('_')[0]
-        df_results = df_results.append(results_pred, ignore_index=True)
+        df_lst.append(results_pred)
 
+    df_results = pd.DataFrame(df_lst)
     return df_results
 
 
@@ -263,7 +265,7 @@ def run_main(args):
     if thrPred is None:
         for exp in exp_dct.keys():
             config_dct = exp_dct[exp]
-            print(config_dct['uncertainty_measure'])
+            logger.debug(config_dct['uncertainty_measure'])
 
             # print_unc_stats is used to determine 'uncertainty_thr'
             print_unc_stats(config_dct['uncertainty_measure'], pred_folder, subj_acq_lst)
@@ -299,9 +301,9 @@ def run_main(args):
                            param_eval=context["eval_params"],
                            unc_name=sufUnc,
                            thr_unc=thrUnc)
-        print(df.head())
+        logger.debug(df.head())
         vals = [v for v in df.dice_class0 if str(v) != 'nan']
-        print('Median (IQR): {} ({} - {}).'.format(np.median(vals), np.percentile(vals, 25), np.percentile(vals, 75)))
+        logger.info(f"Median (IQR): {np.median(vals)} ({np.percentile(vals, 25)} - {np.percentile(vals, 75)}).")
         df.to_csv(os.path.join(ofolder, '_'.join([str(sufUnc), str(thrUnc), str(thrPred)]) + '.csv'))
 
 

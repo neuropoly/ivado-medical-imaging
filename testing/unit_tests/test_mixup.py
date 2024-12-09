@@ -2,9 +2,9 @@ import ivadomed.mixup as imed_mixup
 import torch
 import pytest
 import logging
-import os
 from testing.unit_tests.t_utils import create_tmp_dir,  __tmp_dir__
 from testing.common_testing_util import remove_tmp_dir
+from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
@@ -13,8 +13,8 @@ def setup_function():
 
 
 @pytest.mark.parametrize("debugging", [False, True])
-@pytest.mark.parametrize("ofolder", [os.path.join(__tmp_dir__, "test"),
-                                     os.path.join(__tmp_dir__, "mixup_test")])
+@pytest.mark.parametrize("ofolder", [str(Path(__tmp_dir__, "test")),
+                                     str(Path(__tmp_dir__, "mixup_test"))])
 def test_mixup(debugging, ofolder):
     inp = [[[[0 for i in range(40)] for i in range(40)]]]
     targ = [[[[0 for i in range(40)] for i in range(40)]]]

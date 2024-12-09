@@ -16,7 +16,6 @@ import copy
 import itertools
 from functools import partial
 import json
-import logging
 import random
 import collections.abc
 import shutil
@@ -25,16 +24,19 @@ import joblib
 import pandas as pd
 import numpy as np
 import torch.multiprocessing as mp
+from ivadomed.loader.bids_dataframe import BidsDataframe
 import ivadomed.scripts.visualize_and_compare_testing_models as violin_plots
 from pathlib import Path
+from loguru import logger
 from ivadomed import main as ivado
 from ivadomed import config_manager as imed_config_manager
 from ivadomed.loader import utils as imed_loader_utils
 from ivadomed.scripts.compare_models import compute_statistics
 from ivadomed import utils as imed_utils
+from ivadomed.keywords import ConfigKW,SplitDatasetKW, LoaderParamsKW
 
 LOG_FILENAME = 'log.txt'
-logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
+logger.add(LOG_FILENAME)
 
 
 def get_parser():
@@ -85,25 +87,25 @@ def train_worker(config, thr_incr):
     ID = int(current.name[-1]) - 1
 
     # Use GPU i from the array specified in the config file
-    config["gpu_ids"] = [config["gpu_ids"][ID]]
+    config[ConfigKW.GPU_IDS] = [config[ConfigKW.GPU_IDS][ID]]
 
     # Call ivado cmd_train
     try:
         # Save best validation score
-        config["command"] = "train"
+        config[ConfigKW.COMMAND] = "train"
         best_training_dice, best_training_loss, best_validation_dice, best_validation_loss = \
             ivado.run_command(config, thr_increment=thr_incr)
 
     except Exception:
-        logging.exception('Got exception on main handler')
-        logging.info("Unexpected error:", sys.exc_info()[0])
+        logger.exception('Got exception on main handler')
+        logger.info("Unexpected error:", sys.exc_info()[0])
         raise
 
     # Save config file in output path
-    config_copy = open(config["path_output"] + "/config_file.json", "w")
+    config_copy = open(config[ConfigKW.PATH_OUTPUT] + "/config_file.json", "w")
     json.dump(config, config_copy, indent=4)
 
-    return config["path_output"], best_training_dice, best_training_loss, best_validation_dice, \
+    return config[ConfigKW.PATH_OUTPUT], best_training_dice, best_training_loss, best_validation_dice, \
         best_validation_loss
 
 
@@ -115,19 +117,19 @@ def test_worker(config):
     ID = int(current.name[-1]) - 1
 
     # Use GPU i from the array specified in the config file
-    config["gpu_ids"] = [config["gpu_ids"][ID]]
+    config[ConfigKW.GPU_IDS] = [config[ConfigKW.GPU_IDS][ID]]
 
     try:
         # Save best test score
-        config["command"] = "test"
+        config[ConfigKW.COMMAND] = "test"
         df_results, test_dice = ivado.run_command(config)
 
     except Exception:
-        logging.exception('Got exception on main handler')
-        logging.info("Unexpected error:", sys.exc_info()[0])
+        logger.exception('Got exception on main handler')
+        logger.info("Unexpected error:", sys.exc_info()[0])
         raise
 
-    return config["path_output"], test_dice, df_results
+    return config[ConfigKW.PATH_OUTPUT], test_dice, df_results
 
 
 def split_dataset(initial_config):
@@ -152,33 +154,33 @@ def split_dataset(initial_config):
                     "path_output": "./tmp/"
                 }
     """
-    loader_parameters = initial_config["loader_parameters"]
-    path_output = Path(initial_config["path_output"])
+    loader_parameters = initial_config[ConfigKW.LOADER_PARAMETERS]
+    path_output = Path(initial_config[ConfigKW.PATH_OUTPUT])
     if not path_output.is_dir():
-        print('Creating output path: {}'.format(path_output))
+        logger.info(f'Creating output path: {path_output}')
         path_output.mkdir(parents=True)
     else:
-        print('Output path already exists: {}'.format(path_output))
+        logger.info(f'Output path already exists: {path_output}')
 
-    bids_df = imed_loader_utils.BidsDataframe(loader_parameters, str(path_output), derivatives=True)
+    bids_df = BidsDataframe(loader_parameters, str(path_output), derivatives=True)
 
     train_lst, valid_lst, test_lst = imed_loader_utils.get_new_subject_file_split(
         df=bids_df.df,
-        data_testing=initial_config["split_dataset"]["data_testing"],
-        split_method=initial_config["split_dataset"]["split_method"],
-        random_seed=initial_config["split_dataset"]["random_seed"],
-        train_frac=initial_config["split_dataset"]["train_fraction"],
-        test_frac=initial_config["split_dataset"]["test_fraction"],
+        data_testing=initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.DATA_TESTING],
+        split_method=initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.SPLIT_METHOD],
+        random_seed=initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.RANDOM_SEED],
+        train_frac=initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.TRAIN_FRACTION],
+        test_frac=initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.TEST_FRACTION],
         path_output="./",
-        balance=initial_config["split_dataset"]['balance'] \
-        if 'balance' in initial_config["split_dataset"] else None
+        balance=initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.BALANCE] \
+        if SplitDatasetKW.BALANCE in initial_config[ConfigKW.SPLIT_DATASET] else None
     )
 
     # save the subject distribution
     split_dct = {'train': train_lst, 'valid': valid_lst, 'test': test_lst}
     split_path = "./" + "common_split_datasets.joblib"
     joblib.dump(split_dct, split_path)
-    initial_config["split_dataset"]["fname_split"] = split_path
+    initial_config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.FNAME_SPLIT] = split_path
     return initial_config
 
 
@@ -251,11 +253,14 @@ def make_config_list(param_list, initial_config, all_combin, multi_params):
         for combination in list(itertools.combinations(param_list, len(keys))):
             if keys_are_unique(combination):
                 new_config = copy.deepcopy(initial_config)
-                path_output = new_config["path_output"]
+                path_output = new_config[ConfigKW.PATH_OUTPUT]
                 for hyper_option in combination:
                     new_config = update_dict(new_config, hyper_option.option, hyper_option.base_key)
-                    path_output = path_output + hyper_option.name
-                new_config["path_output"] = path_output
+                    folder_name_suffix = hyper_option.name
+                    folder_name_suffix = folder_name_suffix.translate({ord(i): None for i in '[]}{ \''})
+                    folder_name_suffix = folder_name_suffix.translate({ord(i): '-' for i in ':=,'})
+                    path_output = path_output + folder_name_suffix
+                new_config[ConfigKW.PATH_OUTPUT] = path_output
                 config_list.append(new_config)
     elif multi_params:
         base_keys = get_base_keys(param_list)
@@ -265,18 +270,24 @@ def make_config_list(param_list, initial_config, all_combin, multi_params):
         max_length = np.min([len(base_key_dict[base_key]) for base_key in base_key_dict.keys()])
         for i in range(0, max_length):
             new_config = copy.deepcopy(initial_config)
-            path_output = new_config["path_output"]
+            path_output = new_config[ConfigKW.PATH_OUTPUT]
             for key in base_key_dict.keys():
                 hyper_option = base_key_dict[key][i]
                 new_config = update_dict(new_config, hyper_option.option, hyper_option.base_key)
-                path_output = path_output + hyper_option.name
-            new_config["path_output"] = path_output
+                folder_name_suffix = hyper_option.name
+                folder_name_suffix = folder_name_suffix.translate({ord(i): None for i in '[]}{ \''})
+                folder_name_suffix = folder_name_suffix.translate({ord(i): '-' for i in ':=,'})
+                path_output = path_output + folder_name_suffix
+            new_config[ConfigKW.PATH_OUTPUT] = path_output
             config_list.append(new_config)
     else:
         for hyper_option in param_list:
             new_config = copy.deepcopy(initial_config)
             update_dict(new_config, hyper_option.option, hyper_option.base_key)
-            new_config["path_output"] = initial_config["path_output"] + hyper_option.name
+            folder_name_suffix = hyper_option.name
+            folder_name_suffix = folder_name_suffix.translate({ord(i): None for i in '[]}{ \''})
+            folder_name_suffix = folder_name_suffix.translate({ord(i): '-' for i in ':=,'})
+            new_config[ConfigKW.PATH_OUTPUT] = initial_config[ConfigKW.PATH_OUTPUT] + folder_name_suffix
             config_list.append(new_config)
 
     return config_list
@@ -461,10 +472,10 @@ def format_results(results_df, config_list, param_list):
 
     config_df = pd.DataFrame.from_dict(config_list)
     keep = list(set([list(hyper_option.option.keys())[0] for hyper_option in param_list]))
-    keep.append("path_output")
+    keep.append(ConfigKW.PATH_OUTPUT)
     config_df = config_df[keep]
 
-    results_df = config_df.set_index('path_output').join(results_df.set_index('path_output'))
+    results_df = config_df.set_index(ConfigKW.PATH_OUTPUT).join(results_df.set_index(ConfigKW.PATH_OUTPUT))
     results_df = results_df.reset_index()
     results_df = results_df.sort_values(by=['best_validation_loss'])
     return results_df
@@ -663,10 +674,10 @@ def automate_training(file_config, file_config_hyper, fixed_split, all_combin, p
     initial_config = imed_config_manager.ConfigurationManager(file_config).get_config()
 
     if path_data is not None:
-        initial_config["loader_parameters"]["path_data"] = path_data
+        initial_config[ConfigKW.LOADER_PARAMETERS][LoaderParamsKW.PATH_DATA] = path_data
 
     # Split dataset if not already done
-    if fixed_split and (initial_config.get("split_path") is None):
+    if fixed_split and (initial_config.get(ConfigKW.SPLIT_PATH) is None):
         initial_config = split_dataset(initial_config)
 
     # Hyperparameters values to experiment
@@ -681,25 +692,25 @@ def automate_training(file_config, file_config_hyper, fixed_split, all_combin, p
     ctx = mp.get_context("spawn")
 
     # Run all configs on a separate process, with a maximum of n_gpus  processes at a given time
-    logging.info(initial_config['gpu_ids'])
+    logger.info(initial_config[ConfigKW.GPU_IDS])
 
     results_df = pd.DataFrame()
     eval_df = pd.DataFrame()
     all_mean = pd.DataFrame()
 
-    with ctx.Pool(processes=len(initial_config["gpu_ids"])) as pool:
+    with ctx.Pool(processes=len(initial_config[ConfigKW.GPU_IDS])) as pool:
         for i in range(n_iterations):
             if not fixed_split:
                 # Set seed for iteration
                 seed = random.randint(1, 10001)
                 for config in config_list:
-                    config["split_dataset"]["random_seed"] = seed
+                    config[ConfigKW.SPLIT_DATASET][SplitDatasetKW.RANDOM_SEED] = seed
                     if all_logs:
                         if i:
-                            config["path_output"] = config["path_output"].replace("_n=" + str(i - 1).zfill(2),
+                            config[ConfigKW.PATH_OUTPUT] = config[ConfigKW.PATH_OUTPUT].replace("_n=" + str(i - 1).zfill(2),
                                                                                       "_n=" + str(i).zfill(2))
                         else:
-                            config["path_output"] += "_n=" + str(i).zfill(2)
+                            config[ConfigKW.PATH_OUTPUT] += "_n=" + str(i).zfill(2)
 
                 validation_scores = pool.map(partial(train_worker, thr_incr=thr_increment), config_list)
 
@@ -716,12 +727,12 @@ def automate_training(file_config, file_config_hyper, fixed_split, all_combin, p
                         try:
                             shutil.rmtree(str(path_pred))
                         except OSError as e:
-                            logging.info("Error: %s - %s." % (e.filename, e.strerror))
+                            logger.info(f"Error: {e.filename} - {e.strerror}.")
 
                     # Take the config file within the path_output because binarize_prediction may have been updated
-                    json_path = Path(config['path_output'], 'config_file.json')
+                    json_path = Path(config[ConfigKW.PATH_OUTPUT], 'config_file.json')
                     new_config = imed_config_manager.ConfigurationManager(str(json_path)).get_config()
-                    new_config["gpu_ids"] = config["gpu_ids"]
+                    new_config[ConfigKW.GPU_IDS] = config[ConfigKW.GPU_IDS]
                     new_config_list.append(new_config)
 
                 test_results = pool.map(test_worker, new_config_list)
@@ -767,8 +778,8 @@ def automate_training(file_config, file_config_hyper, fixed_split, all_combin, p
     results_df = format_results(results_df, config_list, param_list)
     results_df.to_csv(str(Path(output_dir, "detailed_results.csv")))
 
-    logging.info("Detailed results")
-    logging.info(results_df)
+    logger.info("Detailed results")
+    logger.info(results_df)
 
     # Compute avg, std, p-values
     if n_iterations > 1:
@@ -776,7 +787,7 @@ def automate_training(file_config, file_config_hyper, fixed_split, all_combin, p
 
     # If the test is selected, also show the violin plots
     if plot_comparison:
-        output_folders = [config_list[i]["path_output"] for i in range(len(config_list))]
+        output_folders = [config_list[i][ConfigKW.PATH_OUTPUT] for i in range(len(config_list))]
         violin_plots.visualize_and_compare_models(ofolders=output_folders)
 
 

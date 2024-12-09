@@ -1,4 +1,3 @@
-import os
 import csv
 import json
 import pytest
@@ -7,9 +6,10 @@ import pandas as pd
 from ivadomed.loader import utils as imed_loader_utils
 from testing.unit_tests.t_utils import create_tmp_dir, __tmp_dir__
 from testing.common_testing_util import remove_tmp_dir
+from pathlib import Path
 
-PATH_DATA = os.path.join(__tmp_dir__, 'bids')
-LOG_PATH = os.path.join(__tmp_dir__, 'log')
+PATH_DATA = Path(__tmp_dir__, 'bids')
+PATH_LOG = Path(__tmp_dir__, 'log')
 N = 200
 N_CENTERS = 5
 
@@ -23,12 +23,12 @@ def load_dataset(split_params):
     create_jsonfile()
 
     # Create log path
-    if not os.path.isdir(LOG_PATH):
-        os.mkdir(LOG_PATH)
+    if not PATH_LOG.is_dir():
+        PATH_LOG.mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_csv(os.path.join(PATH_DATA, "participants.tsv"), sep='\t')
+    df = pd.read_csv(Path(PATH_DATA, "participants.tsv"), sep='\t')
     df['filename'] = df["participant_id"]
-    train, val, test = imed_loader_utils.get_subdatasets_subject_files_list(split_params, df, LOG_PATH)
+    train, val, test = imed_loader_utils.get_subdatasets_subject_files_list(split_params, df, str(PATH_LOG))
     return train, val, test, patient_mapping
 
 
@@ -162,8 +162,8 @@ def test_per_center_balance(split_params):
 
 def create_tsvfile():
     # Create data path
-    if not os.path.isdir(PATH_DATA):
-        os.mkdir(PATH_DATA)
+    if not PATH_DATA.is_dir():
+        PATH_DATA.mkdir(parents=True, exist_ok=True)
 
     patient_mapping = {}
 
@@ -184,7 +184,7 @@ def create_tsvfile():
         patient_mapping[patient_id]['center'] = center_id
         participants.append(row_participants)
 
-    with open(os.path.join(PATH_DATA, "participants.tsv"), 'w') as tsv_file:
+    with Path(PATH_DATA, "participants.tsv").open(mode='w') as tsv_file:
         tsv_writer = csv.writer(tsv_file, delimiter='\t', lineterminator='\n')
         tsv_writer.writerow(["participant_id", "disability", "institution_id"])
         for item in sorted(participants):
@@ -200,7 +200,7 @@ def create_jsonfile():
     dataset_description[u'Name'] = 'Test'
     dataset_description[u'BIDSVersion'] = '1.2.1'
 
-    with open(os.path.join(PATH_DATA, "dataset_description.json"), 'w') as outfile:
+    with Path(PATH_DATA, "dataset_description.json").open(mode='w') as outfile:
         outfile.write(json.dumps(dataset_description, indent=2, sort_keys=True))
         outfile.close()
 

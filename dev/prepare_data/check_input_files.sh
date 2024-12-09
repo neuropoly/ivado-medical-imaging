@@ -10,12 +10,9 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 # Retrieve input params
 SUBJECT=$1
-PATH_RESULTS=$2
-PATH_QC=$3
-PATH_LOG=$4
 
 # Set filenames
-PATH_IN="`pwd`/${SUBJECT}/anat"
+PATH_IN="${PATH_DATA}/${SUBJECT}/anat"
 file_t1w_mts="${SUBJECT}_acq-T1w_MTS"
 file_mton="${SUBJECT}_acq-MTon_MTS"
 file_mtoff="${SUBJECT}_acq-MToff_MTS"

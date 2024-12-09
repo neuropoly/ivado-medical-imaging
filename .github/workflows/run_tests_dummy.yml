@@ -1,0 +1,39 @@
+# This is a dummy version of run_tests.yml, which allows for conditional checks to still be "Required Statuses" for pull requests to be allowed to be merged
+
+name: Run tests on all platforms
+
+# see https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+# and https://github.com/orgs/community/discussions/13690
+on:
+  pull_request:
+    paths:
+      # this list needs to be kept in sync manually with the opposite list in run_tests.yml
+      - '**.md'
+      - '**.rst'
+      - '**.bib'
+      - '.github/**'
+      - '!.github/workflows/run_tests.yml'
+      - 'dev/**'
+      - 'docs/**'
+      - 'images/**'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - '.readthedocs.yml'
+
+jobs:
+  ultra_matrix_test:
+    name: Matrix Test of Python ${{ matrix.python-version }} on ${{ matrix.os }}
+
+    # this section also needs to be kept in sync with run_tests.yml
+    strategy:
+      matrix:
+        # This list must be kept **in sync** with the Required Statuses in https://github.com/ivadomed/ivadomed/settings/branch_protection_rules/5051948
+        os: [ "macos-latest", "windows-latest", "ubuntu-20.04" ]
+        python-version: [ 3.8 ]
+        test-name:
+          - integration-test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: 'echo "No code changes, so no build required" '

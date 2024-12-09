@@ -9,6 +9,13 @@
         "object_detection_path": null,
         "safety_factor": [1.0, 1.0, 1.0]
     },
+    "wandb": {
+        "wandb_api_key": "",
+        "project_name": "my_project",
+        "group_name": "my_group",
+        "run_name": "run-1",
+        "log_grads_every": 100
+    },
     "loader_parameters": {
         "path_data": ["path_data"],
         "subject_selection": {"n": [], "metadata": [], "value": []},
@@ -26,6 +33,10 @@
         "slice_filter_params": {
             "filter_empty_mask": false,
             "filter_empty_input": true
+        },
+        "patch_filter_params": {
+            "filter_empty_mask": false,
+            "filter_empty_input": false
         },
         "slice_axis": "axial",
         "multichannel": false,
@@ -84,6 +95,7 @@
     },
     "postprocessing": {},
     "evaluation_parameters": {
+        "object_detection_metrics": true
     },
     "transformation": {
     }

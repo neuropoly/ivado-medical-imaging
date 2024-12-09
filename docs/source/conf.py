@@ -88,6 +88,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autosectionlabel',
     'sphinx-jsonschema',
+    'sphinx_tabs.tabs',
+    'sphinx_toolbox.collapse',
 ]
 
 autoclass_content = "both"

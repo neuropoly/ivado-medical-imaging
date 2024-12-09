@@ -1,57 +1,58 @@
 import nibabel as nib
-import os
 from tqdm import tqdm
 from scipy.ndimage import label, generate_binary_structure
+from pathlib import Path
 import json
 import numpy as np
 from ivadomed import postprocessing as imed_postpro
+from typing import List
 
 
-def run_uncertainty(ifolder):
+def run_uncertainty(image_folder):
     """Compute uncertainty from model prediction.
 
     This function loops across the model predictions (nifti masks) and estimates the uncertainty from the Monte Carlo
     samples. Both voxel-wise and structure-wise uncertainty are estimates.
 
     Args:
-        ifolder (str): Folder containing the Monte Carlo samples.
+        image_folder (str): Folder containing the Monte Carlo samples.
     """
     # list subj_acq prefixes
-    subj_acq_lst = [f.split('_pred')[0] for f in os.listdir(ifolder)
-                    if f.endswith('.nii.gz') and '_pred' in f]
+    subj_acq_lst = [file.name.split('_pred')[0] for file in Path(image_folder).iterdir()
+                    if file.name.endswith('.nii.gz') and '_pred' in file.name]
     # remove duplicates
     subj_acq_lst = list(set(subj_acq_lst))
     # keep only the images where unc has not been computed yet
-    subj_acq_lst = [f for f in subj_acq_lst if not os.path.isfile(
-        os.path.join(ifolder, f + '_unc-cv.nii.gz'))]
+    subj_acq_lst = [file for file in subj_acq_lst if not Path(image_folder, file + '_unc-cv.nii.gz').is_file()]
 
     # loop across subj_acq
     for subj_acq in tqdm(subj_acq_lst, desc="Uncertainty Computation"):
         # hard segmentation from MC samples
-        fname_pred = os.path.join(ifolder, subj_acq + '_pred.nii.gz')
+        fname_pred: Path = Path(image_folder, subj_acq + '_pred.nii.gz')
         # fname for soft segmentation from MC simulations
-        fname_soft = os.path.join(ifolder, subj_acq + '_soft.nii.gz')
+        fname_soft: Path = Path(image_folder, subj_acq + '_soft.nii.gz')
         # find Monte Carlo simulations
-        fname_pred_lst = [os.path.join(ifolder, f)
-                          for f in os.listdir(ifolder) if subj_acq + '_pred_' in f and
-                          ('_painted' not in f) and ('_color' not in f)]
+        fname_pred_lst: List[str] = []
+        for file in Path(image_folder).iterdir():
+            if subj_acq + '_pred_' in file.name and ('_painted' not in file.name) and ('_color' not in file.name):
+                fname_pred_lst.append(str(file))
 
         # if final segmentation from Monte Carlo simulations has not been generated yet
-        if not os.path.isfile(fname_pred) or not os.path.isfile(fname_soft):
+        if not fname_pred.is_file() or not fname_soft.is_file():
             # threshold used for the hard segmentation
             thr = 1. / len(fname_pred_lst)  # 1 for all voxels where at least on MC sample predicted 1
             # average then argmax
-            combine_predictions(fname_pred_lst, fname_pred, fname_soft, thr=thr)
+            combine_predictions(fname_pred_lst, str(fname_pred), str(fname_soft), thr=thr)
 
-        fname_unc_vox = os.path.join(ifolder, subj_acq + '_unc-vox.nii.gz')
-        if not os.path.isfile(fname_unc_vox):
+        fname_unc_vox = Path(image_folder, subj_acq + '_unc-vox.nii.gz')
+        if not fname_unc_vox.is_file():
             # compute voxel-wise uncertainty map
-            voxelwise_uncertainty(fname_pred_lst, fname_unc_vox)
+            voxelwise_uncertainty(fname_pred_lst, str(fname_unc_vox))
 
-        fname_unc_struct = os.path.join(ifolder, subj_acq + '_unc.nii.gz')
-        if not os.path.isfile(os.path.join(ifolder, subj_acq + '_unc-cv.nii.gz')):
+        fname_unc_struct = Path(image_folder, subj_acq + '_unc.nii.gz')
+        if not Path(image_folder, subj_acq + '_unc-cv.nii.gz').is_file():
             # compute structure-wise uncertainty
-            structurewise_uncertainty(fname_pred_lst, fname_pred, fname_unc_vox, fname_unc_struct)
+            structurewise_uncertainty(fname_pred_lst, str(fname_pred), str(fname_unc_vox), str(fname_unc_struct))
 
 
 def combine_predictions(fname_lst, fname_hard, fname_prob, thr=0.5):
@@ -69,18 +70,26 @@ def combine_predictions(fname_lst, fname_hard, fname_prob, thr=0.5):
     """
     # collect all MC simulations
     mc_data = np.array([nib.load(fname).get_fdata() for fname in fname_lst])
-    affine = nib.load(fname_lst[0]).affine
+    first_file_header = nib.load(fname_lst[0]).header
 
     # average over all the MC simulations
     data_prob = np.mean(mc_data, axis=0)
     # save prob segmentation
-    nib_prob = nib.Nifti1Image(data_prob, affine)
+    nib_prob = nib.Nifti1Image(
+        dataobj=data_prob,
+        affine=first_file_header.get_best_affine(),
+        header=first_file_header.copy()
+    )
     nib.save(nib_prob, fname_prob)
 
     # argmax operator
     data_hard = imed_postpro.threshold_predictions(data_prob, thr=thr).astype(np.uint8)
     # save hard segmentation
-    nib_hard = nib.Nifti1Image(data_hard, affine)
+    nib_hard = nib.Nifti1Image(
+        dataobj=data_hard,
+        affine=first_file_header.get_best_affine(),
+        header=first_file_header.copy()
+    )
     nib.save(nib_hard, fname_hard)
 
 
@@ -96,7 +105,7 @@ def voxelwise_uncertainty(fname_lst, fname_out, eps=1e-5):
     """
     # collect all MC simulations
     mc_data = np.array([nib.load(fname).get_fdata() for fname in fname_lst])
-    affine = nib.load(fname_lst[0]).affine
+    affine = nib.load(fname_lst[0]).header.get_best_affine()
 
     # entropy
     unc = np.repeat(np.expand_dims(mc_data, -1), 2, -1)  # n_it, x, y, z, 2
@@ -165,7 +174,7 @@ def structurewise_uncertainty(fname_lst, fname_hard, fname_unc_vox, fname_out):
         # Loop across objects
         for i_obj in labels:
             # select the current structure, remaining voxels are set to zero
-            data_hard_labeled_class_obj = (np.array(data_hard_labeled_class) == i_obj).astype(np.int)
+            data_hard_labeled_class_obj = (np.array(data_hard_labeled_class) == i_obj).astype(int)
 
             # Get object coordinates
             xx_obj, yy_obj, zz_obj = np.where(data_hard_labeled_class_obj)
@@ -183,7 +192,7 @@ def structurewise_uncertainty(fname_lst, fname_hard, fname_unc_vox, fname_out):
                 if i_mc_label > 0:
                     data_tmp[mc_dict["mc_labeled"][i_mc][i_class] == i_mc_label] = 1.
 
-                data_class_obj_mc.append(data_tmp.astype(np.bool))
+                data_class_obj_mc.append(data_tmp.astype(bool))
 
             # COMPUTE IoU
             # Init intersection and union
@@ -219,9 +228,23 @@ def structurewise_uncertainty(fname_lst, fname_hard, fname_unc_vox, fname_out):
     fname_iou = fname_out.split('.nii.gz')[0] + '-iou.nii.gz'
     fname_cv = fname_out.split('.nii.gz')[0] + '-cv.nii.gz'
     fname_avgUnc = fname_out.split('.nii.gz')[0] + '-avgUnc.nii.gz'
-    nib_iou = nib.Nifti1Image(data_iou, nib_hard.affine)
-    nib_cv = nib.Nifti1Image(data_cv, nib_hard.affine)
-    nib_avgUnc = nib.Nifti1Image(data_avgUnc, nib_hard.affine)
+
+    nib_iou = nib.Nifti1Image(
+        dataobj=data_iou,
+        affine=nib_hard.header.get_best_affine(),
+        header=nib_hard.header.copy()
+    )
+    nib_cv = nib.Nifti1Image(
+        dataobj=data_cv,
+        affine=nib_hard.header.get_best_affine(),
+        header=nib_hard.header.copy()
+    )
+    nib_avgUnc = nib.Nifti1Image(
+        data_avgUnc,
+        affine=nib_hard.header.get_best_affine(),
+        header=nib_hard.header.copy()
+    )
+
     nib.save(nib_iou, fname_iou)
     nib.save(nib_cv, fname_cv)
     nib.save(nib_avgUnc, fname_avgUnc)

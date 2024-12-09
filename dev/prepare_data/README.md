@@ -1,6 +1,6 @@
 # Data preparation
 
-These scripts prepare the data for training. It takes as input the [Spinal Cord MRI Public Database](https://osf.io/76jkx/) and outputs BIDS-compatible datasets with segmentation labels for each subject. More specifically, for each subject, the segmentation is run in one volume (T1w), then all volumes are registered to the T1w volume so that all volumes are in the same voxel space and the unique segmentation can be used across volumes.
+These scripts prepare the data for training. It takes as input the [Spine Generic Public Database (Multi-Subject)](https://github.com/spine-generic/data-multi-subject) and outputs BIDS-compatible datasets with segmentation labels for each subject. More specifically, for each subject, the segmentation is run in one volume (T1w), then all volumes are registered to the T1w volume so that all volumes are in the same voxel space and the unique segmentation can be used across volumes.
 
 ## Dependencies
 
@@ -17,11 +17,11 @@ source PATH_TO_YOUR_VENV/venv-ivadomed/bin/activate
 
 #### Initial steps, check for folder integrity
 
-- Copy the file `parameters_template.sh` and rename it as `parameters.sh`.
-- Edit the file `parameters.sh` and modify the variables according to your needs.
+- Copy the file `config_template.yml` and rename it as `config.yml`.
+- Edit the file `config.yml` and modify the values according to your needs.
 - Make sure input files are present:
 ~~~
-sct_run_batch parameters.sh check_input_files.sh
+sct_run_batch -script check_input_files.sh -config config.yml
 ~~~
 
 #### Run first processing
@@ -29,7 +29,7 @@ sct_run_batch parameters.sh check_input_files.sh
 Loop across subjects and run full processing:
 
 ~~~
-sct_run_batch parameters.sh prepare_data.sh
+sct_run_batch -script prepare_data.sh -config config.yml
 ~~~
 
 #### Perform QC
@@ -66,18 +66,18 @@ Check the following files under e.g. `result/sub-balgrist01/anat/tmp`:
   - If the segmentation exists in one slice but only consists of a few pixels, because the image quality is bad or because it is no more covering the cord (e.g. brainstem), remove all pixels in the current slice (better to have no segmentation than partial segmentation).
   - If the spinal cord is only partially visible (this can happen in T2star scans due to the registration), zero all pixels in the slice.
 - Save with suffix `-manual`.
-- Move to a folder named seg_manual/$FILENAME. E.g.: `spineGeneric_201903031331/seg_manual/sub-amu01_acq-T1w_MTS_crop_r_seg-manual.nii.gz`
+- Move to a folder named seg_manual/$FILENAME. E.g.: `~/data-multi-subject/derivatives/seg_manual/sub-amu01_acq-T1w_MTS_crop_r_seg-manual.nii.gz`
 
 #### Exclude images
 
-If some images are of unacceptable quality, they could be excluded from the final output dataset. List images to exclude in **parameters.sh** using the field `TO_EXCLUDE`. Note: Only write the file prefix (see **parameters_template.sh** for examples).
+If some images are of unacceptable quality, they could be excluded from the final output dataset. List images to exclude in **config.yml** using the field `exclude-list`. 
 
 #### Re-run processing (using manually-corrected segmentations)
 
-Make sure to update the field `PATH_SEGMANUAL` in the file `parameters.sh`, then re-run:
+Make sure to place your manually-corrected segmentations in the directory specified by `config.yml`, then re-run:
 
 ~~~
-sct_run_batch parameters.sh prepare_data.sh
+sct_run_batch -script prepare_data.sh -config config.yml
 ~~~
 
 #### Copy files, final QC
@@ -85,7 +85,7 @@ sct_run_batch parameters.sh prepare_data.sh
 Copy final files to anat/, copy json sidecars, move segmentations to derivatives/ and generate another QC:
 
 ~~~
-sct_run_batch parameters.sh final_qc.sh
+sct_run_batch -script final_qc.sh config.yml
 ~~~
 
 - Open the new QC: qc2/index.html
@@ -100,5 +100,5 @@ sct_run_batch parameters.sh final_qc.sh
 Once QC and manual correction is done, remove tmp/ folder:
 
 ~~~
-sct_run_batch parameters.sh delete_tmp_files.sh
+sct_run_batch -script delete_tmp_files.sh -config config.yml
 ~~~

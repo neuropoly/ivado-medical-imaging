@@ -7,10 +7,10 @@ import nibabel as nib
 import numpy as np
 import pytest
 import scipy
-import os
 from ivadomed import postprocessing as imed_postpro
 from testing.unit_tests.t_utils import create_tmp_dir,  __data_testing_dir__, download_data_testing_test_files
 from testing.common_testing_util import remove_tmp_dir
+from pathlib import Path
 
 
 def setup_function():
@@ -173,7 +173,7 @@ def test_label_file_from_coordinates(download_data_testing_test_files):
     coord = [[0, 0, 0]]
     # load test image
     nifti = nib.load(
-        os.path.join(__data_testing_dir__, 'sub-unf01/anat/sub-unf01_T1w.nii.gz'))
+        Path(__data_testing_dir__, 'sub-unf01/anat/sub-unf01_T1w.nii.gz'))
     # create fake label
     label = imed_postpro.label_file_from_coordinates(nifti, coord)
     # check if it worked

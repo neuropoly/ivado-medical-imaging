@@ -10,21 +10,22 @@ Checkout `ivadomed/.github/workflows/run_tests.yml` to see how tests are run on 
 
 ## Running Locally
 
-1. Download the required dataset(s) using the `ivadomed` command line tools:
+1. Install dependencies
 ```
 cd ivadomed  # root of the repo
-ivadomed_download_data -d data_testing -o data_testing  # for unit tests
-ivadomed_download_data -d data_functional_testing -o data_functional_testing  # for functional tests
+pip install -e .[dev]
 ```
+
 2. To run all tests:
 ```
-pytest
+pytest -v
 ```
+
 or, to run specific tests:
 ```
-pytest testing/functional_tests/
-pytest testing/unit_tests/
-pytest testing/functional_tests/test_example.py
+pytest -v testing/functional_tests/
+pytest -v testing/unit_tests/
+pytest -v testing/functional_tests/test_example.py
 ```
 
 ## Wiki

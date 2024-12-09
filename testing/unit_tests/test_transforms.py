@@ -7,15 +7,15 @@ from math import isclose
 import numpy as np
 import pytest
 import torch
-from scipy.ndimage.measurements import center_of_mass
-from scipy.ndimage.measurements import label
+from scipy.ndimage import center_of_mass, label
 from ivadomed import maths as imed_maths
 
-from ivadomed.loader.utils import SampleMetadata
+from ivadomed.loader.sample_meta_data import SampleMetadata
 from ivadomed.metrics import dice_score
 from ivadomed.transforms import Clahe, AdditiveGaussianNoise, RandomAffine, RandomReverse, \
     DilateGT, ElasticTransform, ROICrop, CenterCrop, NormalizeInstance, HistogramClipping, \
     NumpyToTensor, Resample
+from ivadomed.keywords import MetadataKW
 
 DEBUGGING = False
 if DEBUGGING:
@@ -71,7 +71,7 @@ def create_test_image(width, height, depth=0, num_contrasts=1, noise_max=10.0, n
     seg = np.ceil(image).astype(np.int32)
 
     if depth == 0:
-        _, _, z_slice = center_of_mass(seg.astype(np.int))
+        _, _, z_slice = center_of_mass(seg.astype(int))
         z_slice = int(round(z_slice))
         seg = seg[:, :, z_slice]
 
@@ -160,9 +160,9 @@ def test_NumpyToTensor(im_seg):
 
 def _test_Resample(im_seg, resample_transform, native_resolution, is_2D=False):
     im, seg = im_seg
-    metadata_ = SampleMetadata({'zooms': native_resolution,
-                                'data_shape': im[0].shape if len(im[0].shape) == 3 else list(im[0].shape) + [1],
-                                'data_type': 'im'
+    metadata_ = SampleMetadata({MetadataKW.ZOOMS: native_resolution,
+                                MetadataKW.DATA_SHAPE: im[0].shape if len(im[0].shape) == 3 else list(im[0].shape) + [1],
+                                MetadataKW.DATA_TYPE: 'im'
                                 })
     metadata_in = [metadata_ for _ in im] if isinstance(im, list) else SampleMetadata({})
 
@@ -173,9 +173,9 @@ def _test_Resample(im_seg, resample_transform, native_resolution, is_2D=False):
 
     # Resampler for label data
     resample_transform.interpolation_order = 0
-    metadata_ = SampleMetadata({'zooms': native_resolution,
-                                'data_shape': seg[0].shape if len(seg[0].shape) == 3 else list(seg[0].shape) + [1],
-                                'data_type': 'gt'
+    metadata_ = SampleMetadata({MetadataKW.ZOOMS: native_resolution,
+                                MetadataKW.DATA_SHAPE: seg[0].shape if len(seg[0].shape) == 3 else list(seg[0].shape) + [1],
+                                MetadataKW.DATA_TYPE: 'gt'
                                 })
     metadata_in = [metadata_ for _ in seg] if isinstance(seg, list) else SampleMetadata({})
     # Resample label data
@@ -238,15 +238,29 @@ def test_NormalizeInstance(im_seg):
     assert abs(do_tensor.mean() - 0.0) <= 1e-2
     assert abs(do_tensor.std() - 1.0) <= 1e-2
 
+    # Transform on Numpy - Uniform sample
+    im = np.ones(im[0].shape)
+    do_im, _ = transform(im.copy(), metadata_in)
+    # Check mean-substraction
+    assert abs(np.mean(do_im) - 0.0) <= 1e-2
+    assert abs(np.std(do_im)) < 1e-5
+
+    # Transform on Tensor - Uniform sample
+    tensor, metadata_tensor = NumpyToTensor()(im, metadata_in)
+    do_tensor, _ = transform(tensor, metadata_tensor)
+    # Check mean-subtraction
+    assert abs(do_tensor.mean() - 0.0) <= 1e-2
+    assert abs(do_tensor.std()) < 1e-5
+
 
 def _test_Crop(im_seg, crop_transform):
     im, seg = im_seg
-    metadata_ = SampleMetadata({'data_shape': im[0].shape, 'crop_params': {}})
+    metadata_ = SampleMetadata({MetadataKW.DATA_SHAPE: im[0].shape, MetadataKW.CROP_PARAMS: {}})
     metadata_in = [metadata_ for _ in im] if isinstance(im, list) else {}
     if crop_transform.__class__.__name__ == "ROICrop":
         _, metadata_in = crop_transform(seg, metadata_in)
         for metadata in metadata_in:
-            assert crop_transform.__class__.__name__ in metadata["crop_params"]
+            assert crop_transform.__class__.__name__ in metadata[MetadataKW.CROP_PARAMS]
 
     # Apply transform
     do_im, do_metadata = crop_transform(im, metadata_in)
@@ -259,8 +273,8 @@ def _test_Crop(im_seg, crop_transform):
         assert list(do_im[idx].shape) == crop_transfrom_size
         assert list(do_seg[idx].shape) == crop_transfrom_size
         # Check metadata
-        assert do_metadata[idx]['crop_params'][crop_transform.__class__.__name__] == \
-               do_seg_metadata[idx]['crop_params'][crop_transform.__class__.__name__]
+        assert do_metadata[idx][MetadataKW.CROP_PARAMS][crop_transform.__class__.__name__] == \
+               do_seg_metadata[idx][MetadataKW.CROP_PARAMS][crop_transform.__class__.__name__]
 
     # Apply undo transform
     undo_im, _ = crop_transform.undo_transform(do_im, do_metadata)
@@ -275,7 +289,7 @@ def _test_Crop(im_seg, crop_transform):
     # Loop and check
     for idx, i in enumerate(im):
         # Check data consistency
-        fh, fw, fd, _, _, _ = do_metadata[idx]['crop_params'][crop_transform.__class__.__name__]
+        fh, fw, fd, _, _, _ = do_metadata[idx][MetadataKW.CROP_PARAMS][crop_transform.__class__.__name__]
         th, tw, td = crop_transform.size
         if not td:
             assert np.array_equal(i[fh:fh + th, fw:fw + tw], undo_im[idx][fh:fh + th, fw:fw + tw])
@@ -392,9 +406,9 @@ def test_DilateGT(im_seg, dilate_transform):
     # Check data augmentation
     for idx, i in enumerate(seg):
         # data aug
-        assert np.sum((do_seg[idx] > 0).astype(np.int)) >= np.sum(i)
+        assert np.sum((do_seg[idx] > 0).astype(int)) >= np.sum(i)
         # same number of objects
-        assert label((do_seg[idx] > 0).astype(np.int))[1] == label(i)[1]
+        assert label((do_seg[idx] > 0).astype(int))[1] == label(i)[1]
 
 
 @pytest.mark.parametrize('im_seg', [create_test_image(100, 100, 0, 1, rad_max=10),

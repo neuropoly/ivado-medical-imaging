@@ -5,7 +5,9 @@ import torch.backends.cudnn as cudnn
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from loguru import logger
 
+from ivadomed.loader.bids_dataframe import BidsDataframe
 from ivadomed import losses as imed_losses
 from ivadomed import models as imed_models
 from ivadomed import utils as imed_utils
@@ -99,12 +101,13 @@ def test_unet_time(download_data_testing_test_files, train_lst, target_lst, conf
         "target_suffix": target_lst,
         "extensions": [".nii.gz"],
         "slice_filter_params": {"filter_empty_mask": False, "filter_empty_input": True},
+        "patch_filter_params": {"filter_empty_mask": False, "filter_empty_input": False},
         "slice_axis": "axial"
     }
     # Update loader_params with config
     loader_params.update(config)
     # Get Training dataset
-    bids_df = imed_loader_utils.BidsDataframe(loader_params, __tmp_dir__, derivatives=True)
+    bids_df = BidsDataframe(loader_params, __tmp_dir__, derivatives=True)
     ds_train = imed_loader.load_dataset(bids_df, **loader_params)
 
     # Loader
@@ -127,7 +130,7 @@ def test_unet_time(download_data_testing_test_files, train_lst, target_lst, conf
     model_class = getattr(imed_models, model_params["name"])
     model = model_class(**model_params)
 
-    print("Training {}".format(model_params["name"]))
+    logger.debug(f"Training {model_params['name']}")
     if cuda_available:
         model.cuda()
 
@@ -198,12 +201,12 @@ def test_unet_time(download_data_testing_test_files, train_lst, target_lst, conf
         total_time = end_time - start_time
         tqdm.write("Epoch {} took {:.2f} seconds.".format(epoch, total_time))
 
-    print('Mean SD init {} -- {}'.format(np.mean(init_lst), np.std(init_lst)))
-    print('Mean SD load {} -- {}'.format(np.mean(load_lst), np.std(load_lst)))
-    print('Mean SD pred {} -- {}'.format(np.mean(pred_lst), np.std(pred_lst)))
-    print('Mean SDopt {} --  {}'.format(np.mean(opt_lst), np.std(opt_lst)))
-    print('Mean SD gen {} -- {}'.format(np.mean(gen_lst), np.std(gen_lst)))
-    print('Mean SD scheduler {} -- {}'.format(np.mean(schedule_lst), np.std(schedule_lst)))
+    logger.info(f"Mean SD init {np.mean(init_lst)} -- {np.std(init_lst)}")
+    logger.info(f"Mean SD load {np.mean(load_lst)} -- {np.std(load_lst)}")
+    logger.info(f"Mean SD pred {np.mean(pred_lst)} -- {np.std(pred_lst)}")
+    logger.info(f"Mean SDopt {np.mean(opt_lst)} --  {np.std(opt_lst)}")
+    logger.info(f"Mean SD gen {np.mean(gen_lst)} -- {np.std(gen_lst)}")
+    logger.info(f"Mean SD scheduler {np.mean(schedule_lst)} -- {np.std(schedule_lst)}")
 
 
 def teardown_function():

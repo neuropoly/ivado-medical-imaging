@@ -10,6 +10,7 @@ from pathlib import Path
 from ivadomed import postprocessing as imed_postpro
 from ivadomed import transforms as imed_transforms
 from ivadomed.loader import utils as imed_loader_utils
+from ivadomed.keywords import ObjectDetectionParamsKW, MetadataKW
 
 
 def get_bounding_boxes(mask):
@@ -23,7 +24,7 @@ def get_bounding_boxes(mask):
     """
 
     # Label the different objects in the mask
-    labeled_mask, _ = ndimage.measurements.label(mask)
+    labeled_mask, _ = ndimage.label(mask)
     object_labels = np.unique(labeled_mask)
     bounding_boxes = []
     for label in object_labels[1:]:
@@ -140,17 +141,17 @@ def resample_bounding_box(metadata, transform):
     for idx, transfo in enumerate(transform.transform["im"].transforms):
         if "Resample" == transfo.__class__.__name__:
             hspace, wspace, dspace = (transfo.hspace, transfo.wspace, transfo.dspace)
-            hfactor = metadata['input_metadata'][0]['zooms'][0] / hspace
-            wfactor = metadata['input_metadata'][0]['zooms'][1] / wspace
-            dfactor = metadata['input_metadata'][0]['zooms'][2] / dspace
+            hfactor = metadata[MetadataKW.INPUT_METADATA][0][MetadataKW.ZOOMS][0] / hspace
+            wfactor = metadata[MetadataKW.INPUT_METADATA][0][MetadataKW.ZOOMS][1] / wspace
+            dfactor = metadata[MetadataKW.INPUT_METADATA][0][MetadataKW.ZOOMS][2] / dspace
             factor = (hfactor, wfactor, dfactor)
-            coord = adjust_bb_size(metadata['input_metadata'][0]['bounding_box'], factor, resample=True)
+            coord = adjust_bb_size(metadata[MetadataKW.INPUT_METADATA][0][MetadataKW.BOUNDING_BOX], factor, resample=True)
 
-            for i in range(len(metadata['input_metadata'])):
-                metadata['input_metadata'][i]['bounding_box'] = coord
+            for i in range(len(metadata[MetadataKW.INPUT_METADATA])):
+                metadata[MetadataKW.INPUT_METADATA][i][MetadataKW.BOUNDING_BOX] = coord
 
-            for i in range(len(metadata['gt_metadata'])):
-                metadata['gt_metadata'][i]['bounding_box'] = coord
+            for i in range(len(metadata[MetadataKW.GT_METADATA])):
+                metadata[MetadataKW.GT_METADATA][i][MetadataKW.BOUNDING_BOX] = coord
             break
 
 
@@ -196,7 +197,7 @@ def adjust_transforms(transforms, seg_pair, length=None, stride=None):
 
     for metadata in seg_pair['input_metadata']:
         assert len(set(index_shape)) == 1
-        metadata['index_shape'] = index_shape[0]
+        metadata[MetadataKW.INDEX_SHAPE] = index_shape[0]
     return transforms
 
 
@@ -237,22 +238,23 @@ def load_bounding_boxes(object_detection_params, subject_path_list, slice_axis, 
     """
     # Load or generate bounding boxes and save them in json file
     bounding_box_dict = {}
-    if object_detection_params is None or object_detection_params['object_detection_path'] is None:
+    if object_detection_params is None or object_detection_params[ObjectDetectionParamsKW.OBJECT_DETECTION_PATH] is None:
         return bounding_box_dict
-    bounding_box_path = Path(object_detection_params.get('path_output'), 'bounding_boxes.json')
+
+    bounding_box_path = Path(object_detection_params.get(ObjectDetectionParamsKW.PATH_OUTPUT), 'bounding_boxes.json')
     if bounding_box_path.exists():
         with bounding_box_path.open(mode='r') as fp:
             bounding_box_dict = json.load(fp)
-    elif object_detection_params['object_detection_path'] is not None and \
-            Path(object_detection_params.get('object_detection_path')).exists():
+    elif object_detection_params[ObjectDetectionParamsKW.OBJECT_DETECTION_PATH] is not None and \
+            Path(object_detection_params.get(ObjectDetectionParamsKW.OBJECT_DETECTION_PATH)).exists():
         bounding_box_dict = generate_bounding_box_file(subject_path_list,
-                                                       object_detection_params['object_detection_path'],
-                                                       object_detection_params['path_output'],
-                                                       object_detection_params['gpu_ids'],
+                                                       object_detection_params[ObjectDetectionParamsKW.OBJECT_DETECTION_PATH],
+                                                       object_detection_params[ObjectDetectionParamsKW.PATH_OUTPUT],
+                                                       object_detection_params[ObjectDetectionParamsKW.GPU_IDS],
                                                        slice_axis,
                                                        constrast_lst,
-                                                       safety_factor=object_detection_params['safety_factor'])
-    elif object_detection_params['object_detection_path'] is not None:
+                                                       safety_factor=object_detection_params[ObjectDetectionParamsKW.SAFETY_FACTOR])
+    elif object_detection_params[ObjectDetectionParamsKW.OBJECT_DETECTION_PATH] is not None:
         raise RuntimeError("Path to object detection model doesn't exist")
 
     return bounding_box_dict
@@ -268,11 +270,11 @@ def verify_metadata(metadata, has_bounding_box):
     Returns:
         bool: Boolean indicating if 'bounding_box' is present across all metadata.
     """
-    index_has_bounding_box = all(['bounding_box' in metadata['input_metadata'][i]
-                                  for i in range(len(metadata['input_metadata']))])
-    for gt_metadata in metadata['gt_metadata']:
+    index_has_bounding_box = all([MetadataKW.BOUNDING_BOX in metadata[MetadataKW.INPUT_METADATA][i]
+                                  for i in range(len(metadata[MetadataKW.INPUT_METADATA]))])
+    for gt_metadata in metadata[MetadataKW.GT_METADATA]:
         if gt_metadata is not None:
-            index_has_bounding_box &= 'bounding_box' in gt_metadata
+            index_has_bounding_box &= MetadataKW.BOUNDING_BOX in gt_metadata
 
     has_bounding_box &= index_has_bounding_box
     return has_bounding_box
@@ -300,7 +302,7 @@ def bounding_box_prior(fname_mask, metadata, slice_axis, safety_factor=None):
     bounding_box = get_bounding_boxes(np_mask)[0]
     if safety_factor:
         bounding_box = adjust_bb_size(bounding_box, safety_factor)
-    metadata['bounding_box'] = bounding_box
+    metadata[MetadataKW.BOUNDING_BOX] = bounding_box
 
 
 def compute_bb_statistics(bounding_box_path):

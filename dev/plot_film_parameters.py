@@ -13,6 +13,7 @@ import seaborn as sns
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from loguru import logger
 
 from ivadomed import config_manager as imed_config_manager
 
@@ -101,7 +102,7 @@ def visualize_tsne(data, metadata_values, layer_no, fname_out):
 
     tsne_df = pd.concat([tsne_df, tsne_df2])
 
-    print('t-SNE done!')
+    logger.info("t-SNE done!")
 
     # Visualize
     fig = plt.figure(figsize=(16,10))
@@ -151,11 +152,11 @@ def run_main(context):
         try:
             visualize_pca(gammas[layer_no], metadata_values, layer_no, out_dir + f"/pca_gamma_{layer_no}.png")
         except ValueError:
-            print(f"No PCA for gamma from the film layer {layer_no} because of a too small dimension.")
+            logger.error(f"No PCA for gamma from the film layer {layer_no} because of a too small dimension.")
         try:
             visualize_pca(betas[layer_no], metadata_values, layer_no, out_dir + f"/pca_beta_{layer_no}.png")
         except ValueError:
-            print(f"No PCA for beta from the film layer {layer_no} because of a too small dimension.")
+            logger.error(f"No PCA for beta from the film layer {layer_no} because of a too small dimension.")
 
     # save tsne for betas and gammas
     for layer_no in gammas.keys():

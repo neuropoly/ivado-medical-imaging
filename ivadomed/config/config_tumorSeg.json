@@ -8,6 +8,13 @@
         "object_detection_path": null,
         "safety_factor": [1.1, 1.1, 1.0]
     },
+    "wandb": {
+        "wandb_api_key": "",
+        "project_name": "my_project",
+        "group_name": "my_group",
+        "run_name": "run-1",
+        "log_grads_every": 100
+    },
     "loader_parameters": {
         "path_data": ["/home/andreanne/Documents/dataset/toy_dataset"],
         "target_suffix": ["_seg-tumor"],
@@ -95,8 +102,8 @@
     "transformation": {
         "Resample":
         {
-            "wspace": 1,
             "hspace": 1,
+            "wspace": 1,
             "dspace": 2
         },
         "CenterCrop": {"size":  [512, 256, 16]},

@@ -33,6 +33,10 @@ def get_midslice_average(path_im, ind, slice_axis=0):
 
     arr_pred_ref_space = imed_loader_utils.reorient_image(np.expand_dims(mid[:, :], axis=slice_axis), 2, image,
                                                    image_can).astype('float32')
-    nib_pred = nib.Nifti1Image(arr_pred_ref_space, image.affine)
+    nib_pred = nib.Nifti1Image(
+        dataobj=arr_pred_ref_space,
+        affine=image.header.get_best_affine(),
+        header=image.header.copy()
+    )
 
     return nib_pred

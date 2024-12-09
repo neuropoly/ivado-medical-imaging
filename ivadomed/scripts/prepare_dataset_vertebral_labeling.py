@@ -3,9 +3,9 @@ from ivadomed import utils as imed_utils
 import ivadomed.preprocessing as imed_preprocessing
 import nibabel as nib
 import numpy as np
-import os
 import ivadomed.maths as imed_maths
 import ivadomed.loader.utils as imed_loader_utils
+from pathlib import Path
 
 
 def mask2label(path_label, aim=0):
@@ -62,21 +62,20 @@ def extract_mid_slice_and_convert_coordinates_to_heatmaps(path, suffix, aim=-1):
     Returns:
         None. Images are saved in BIDS folder
     """
-    t = os.listdir(path)
-    t.remove('derivatives')
+    t = [path_object.name for path_object in Path(path).iterdir() if path_object.name != 'derivatives']
 
     for i in range(len(t)):
-        sub = t[i]
-        path_image = os.path.join(path, t[i], 'anat', t[i] + suffix + '.nii.gz')
-        if os.path.isfile(path_image):
-            path_label = os.path.join(path, 'derivatives', 'labels', t[i], 'anat', t[i] + suffix +
+        subject = t[i]
+        path_image = Path(path, subject, 'anat', subject + suffix + '.nii.gz')
+        if path_image.is_file():
+            path_label = Path(path, 'derivatives', 'labels', subject, 'anat', subject + suffix +
                     '_labels-disc-manual.nii.gz')
-            list_points = mask2label(path_label, aim=aim)
+            list_points = mask2label(str(path_label), aim=aim)
             image_ref = nib.load(path_image)
             nib_ref_can = nib.as_closest_canonical(image_ref)
             imsh = np.array(nib_ref_can.dataobj).shape
-            mid_nifti = imed_preprocessing.get_midslice_average(path_image, list_points[0][0], slice_axis=0)
-            nib.save(mid_nifti, os.path.join(path, t[i], 'anat', t[i] + suffix + '_mid.nii.gz'))
+            mid_nifti = imed_preprocessing.get_midslice_average(str(path_image), list_points[0][0], slice_axis=0)
+            nib.save(mid_nifti, Path(path, subject, 'anat', subject + suffix + '_mid.nii.gz'))
             lab = nib.load(path_label)
             nib_ref_can = nib.as_closest_canonical(lab)
             label_array = np.zeros(imsh[1:])
@@ -87,7 +86,7 @@ def extract_mid_slice_and_convert_coordinates_to_heatmaps(path, suffix, aim=-1):
             heatmap = imed_maths.heatmap_generation(label_array[:, :], 10)
             arr_pred_ref_space = imed_loader_utils.reorient_image(np.expand_dims(heatmap[:, :], axis=0), 2, lab, nib_ref_can)
             nib_pred = nib.Nifti1Image(arr_pred_ref_space, lab.affine)
-            nib.save(nib_pred, os.path.join(path, 'derivatives', 'labels', t[i], 'anat', t[i] + suffix +
+            nib.save(nib_pred, Path(path, 'derivatives', 'labels', subject, 'anat', subject + suffix +
                                             '_mid_heatmap' + str(aim) + '.nii.gz'))
         else:
             pass

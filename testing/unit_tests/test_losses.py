@@ -80,7 +80,15 @@ def test_multiclassdiceloss(params):
     (torch.tensor([[[[1.0, 0.0], [0.0, 0.0]], [[0.0, 1.0], [0.0, 1.0]]]]),
      torch.tensor([[[[1.0, 0.0], [0.0, 0.0]], [[0.0, 1.0], [0.0, 0.0]]]]),
      -18 / 23,
-     GeneralizedDiceLoss(epsilon=1e-5))
+     GeneralizedDiceLoss(epsilon=1e-5)),
+    (torch.tensor([[[[1.0, 0.0], [0.0, 1.0]]], [[[1.0, 0.0], [0.0, 1.0]]]]),
+     torch.tensor([[[[1.0, 0.0], [1.0, 1.0]]], [[[1.0, 0.0], [1.0, 1.0]]]]),
+     -0.8,
+     GeneralizedDiceLoss(epsilon=1e-5, include_background=False)),
+    (torch.tensor([[[[1.0, 0.0], [0.0, 1.0]]], [[[1.0, 0.0], [0.0, 1.0]]]]),
+     torch.tensor([[[[1.0, 0.0], [1.0, 1.0]]], [[[1.0, 0.0], [1.0, 1.0]]]]),
+     -11 / 16,
+     GeneralizedDiceLoss(epsilon=1e-5, include_background=True))
 ])
 def test_generalizeddiceloss(params):
     """Test GeneralizedDiceLoss class in ivadomed.losses.

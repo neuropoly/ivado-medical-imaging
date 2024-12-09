@@ -1,4 +1,3 @@
-import os
 import matplotlib.animation as anim
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,9 +5,11 @@ import nibabel as nib
 import torchvision.utils as vutils
 from ivadomed import postprocessing as imed_postpro
 from ivadomed import inference as imed_inference
+from pathlib import Path
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import wandb
 from torch.autograd import Variable
 from loguru import logger
 from ivadomed.loader import utils as imed_loader_utils
@@ -128,8 +129,8 @@ def convert_labels_to_RGB(grid_img):
     return rgb_img
 
 
-def save_tensorboard_img(writer, epoch, dataset_type, input_samples, gt_samples, preds, is_three_dim=False):
-    """Saves input images, gt and predictions in tensorboard.
+def save_img(writer, epoch, dataset_type, input_samples, gt_samples, preds, wandb_tracking=False, is_three_dim=False):
+    """Saves input images, gt and predictions in tensorboard (and wandb depending upon the inputs in the config file).
 
     Args:
         writer (SummaryWriter): Tensorboard's summary writer.
@@ -174,18 +175,22 @@ def save_tensorboard_img(writer, epoch, dataset_type, input_samples, gt_samples,
                                     normalize=True,
                                     scale_each=True)
         writer.add_image(dataset_type + '/Input', grid_img, epoch)
+        if wandb_tracking:
+            wandb.log({dataset_type+"/Input": wandb.Image(grid_img)})
 
         grid_img = vutils.make_grid(convert_labels_to_RGB(preds),
                                     normalize=True,
                                     scale_each=True)
-
         writer.add_image(dataset_type + '/Predictions', grid_img, epoch)
+        if wandb_tracking:
+            wandb.log({dataset_type+"/Predictions": wandb.Image(grid_img)})
 
         grid_img = vutils.make_grid(convert_labels_to_RGB(gt_samples),
                                     normalize=True,
                                     scale_each=True)
-
         writer.add_image(dataset_type + '/Ground Truth', grid_img, epoch)
+        if wandb_tracking:
+            wandb.log({dataset_type+"/Ground-Truth": wandb.Image(grid_img)})
 
 
 def save_feature_map(batch, layer_name, path_output, model, test_input, slice_axis):
@@ -199,8 +204,8 @@ def save_feature_map(batch, layer_name, path_output, model, test_input, slice_ax
         test_input (Tensor):
         slice_axis (int): Indicates the axis used for the 2D slice extraction: Sagittal: 0, Coronal: 1, Axial: 2.
     """
-    if not os.path.exists(os.path.join(path_output, layer_name)):
-        os.mkdir(os.path.join(path_output, layer_name))
+    if not Path(path_output, layer_name).exists():
+        Path(path_output, layer_name).mkdir()
 
     # Save for subject in batch
     for i in range(batch['input'].size(0)):
@@ -217,20 +222,28 @@ def save_feature_map(batch, layer_name, path_output, model, test_input, slice_ax
         path = batch["input_metadata"][0][i]["input_filenames"]
 
         basename = path.split('/')[-1]
-        save_directory = os.path.join(path_output, layer_name, basename)
+        save_directory = Path(path_output, layer_name, basename)
 
         # Write the attentions to a nifti image
         nib_ref = nib.load(path)
         nib_ref_can = nib.as_closest_canonical(nib_ref)
         oriented_image = imed_loader_utils.reorient_image(orig_input_img[0, 0, :, :, :], slice_axis, nib_ref, nib_ref_can)
 
-        nib_pred = nib.Nifti1Image(oriented_image, nib_ref.affine)
+        nib_pred = nib.Nifti1Image(
+            dataobj=oriented_image,
+            affine=nib_ref.header.get_best_affine(),
+            header=nib_ref.header.copy()
+        )
         nib.save(nib_pred, save_directory)
 
         basename = basename.split(".")[0] + "_att.nii.gz"
-        save_directory = os.path.join(path_output, layer_name, basename)
+        save_directory = Path(path_output, layer_name, basename)
         attention_map = imed_loader_utils.reorient_image(upsampled_attention[0, 0, :, :, :], slice_axis, nib_ref, nib_ref_can)
-        nib_pred = nib.Nifti1Image(attention_map, nib_ref.affine)
+        nib_pred = nib.Nifti1Image(
+            dataobj=attention_map,
+            affine=nib_ref.header.get_best_affine(),
+            header=nib_ref.header.copy()
+        )
 
         nib.save(nib_pred, save_directory)
 

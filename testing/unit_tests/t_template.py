@@ -55,9 +55,9 @@ Names and Files:
 """
 
 import logging
-import os
 from testing.unit_tests.t_utils import create_tmp_dir, __data_testing_dir__, __tmp_dir__
 from testing.common_testing_util import remove_tmp_dir
+from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
@@ -75,10 +75,10 @@ def setup_function():
 
 def test_template():
     # Test Input Files: all test input files should be in tmp/data_testing aka __data_testing_dir__
-    logger.info(os.listdir(__data_testing_dir__))
+    logger.info([f.name for f in Path(__data_testing_dir__).iterdir()])
 
     # Test Output Files: put your output files in tmp folder
-    os.mkdir(os.path.join(__tmp_dir__, 'my_output_dir'))
+    Path(__tmp_dir__, 'my_output_dir').mkdir()
 
     assert 1 == 1
 

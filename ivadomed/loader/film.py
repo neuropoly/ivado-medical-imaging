@@ -1,6 +1,8 @@
+from __future__ import annotations
 import json
 from pathlib import Path
 from copy import deepcopy
+from typing import List, Union
 
 import numpy as np
 from loguru import logger
@@ -8,6 +10,15 @@ from scipy.signal import argrelextrema
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
 from sklearn.preprocessing import OneHotEncoder
+from ivadomed.keywords import MetadataKW
+import typing
+
+if typing.TYPE_CHECKING:
+    from ivadomed.loader.bids_dataset import BidsDataset
+    from ivadomed.loader.bids3d_dataset import Bids3DDataset
+    from ivadomed.loader.mri2d_segmentation_dataset import MRI2DSegmentationDataset
+
+    import torch.nn as nn
 
 from ivadomed import __path__
 
@@ -18,12 +29,16 @@ CONTRAST_CATEGORY = {"T1w": 0, "T2w": 1, "T2star": 2,
                      "acq-MToff_MTS": 3, "acq-MTon_MTS": 4, "acq-T1w_MTS": 5}
 
 
-def normalize_metadata(ds_in, clustering_models, debugging, metadata_type, train_set=False):
+def normalize_metadata(ds_in: Union[BidsDataset, Bids3DDataset, MRI2DSegmentationDataset],
+                       clustering_models: dict,
+                       debugging: bool,
+                       metadata_type: str,
+                       train_set: bool = False) -> (list, OneHotEncoder) | list:
     """Categorize each metadata value using a KDE clustering method, then apply a one-hot-encoding.
 
     Args:
-         ds_in (BidsDataset): Dataset with metadata.
-         clustering_models: Pre-trained clustering model that has been trained on metadata of the training set.
+         ds_in (BidsDataset): Dataset BidsDataset, Bids3D, MRI2D with metadata.
+         clustering_models (dict): Pre-trained clustering model that has been trained on metadata of the training set.
          debugging (bool): If True, extended verbosity and intermediate outputs.
          metadata_type (str): Choice between 'mri_params', 'constrasts' or the name of a column from the
             participants.tsv file.
@@ -42,7 +57,7 @@ def normalize_metadata(ds_in, clustering_models, debugging, metadata_type, train
     ds_out = []
     for idx, subject in enumerate(ds_in):
         s_out = deepcopy(subject)
-        if metadata_type == 'mri_params':
+        if metadata_type == MetadataKW.MRI_PARAMS:
             # categorize flip angle, repetition time and echo time values using KDE
             for m in ['FlipAngle', 'RepetitionTime', 'EchoTime']:
                 v = subject["input_metadata"][m]
@@ -65,7 +80,7 @@ def normalize_metadata(ds_in, clustering_models, debugging, metadata_type, train
 
             s_out["input_metadata"]["film_input"] = [s_out["input_metadata"][k] for k in
                                                      ["FlipAngle", "RepetitionTime", "EchoTime", "Manufacturer"]]
-        elif metadata_type == "contrasts":
+        elif metadata_type == MetadataKW.CONTRASTS:
             for i, input_metadata in enumerate(subject["input_metadata"]):
                 generic_contrast = GENERIC_CONTRAST[input_metadata["contrast"]]
                 label_contrast = CONTRAST_CATEGORY[generic_contrast]
@@ -104,11 +119,11 @@ class Kde_model():
         kde (sklearn.neighbors.KernelDensity):
         minima (float): Local minima.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self.kde = KernelDensity()
         self.minima = None
 
-    def train(self, data, value_range, gridsearch_bandwidth_range):
+    def train(self, data: list, value_range: np.ndarray, gridsearch_bandwidth_range: np.ndarray) -> None:
         # reshape data to fit sklearn
         data = np.array(data).reshape(-1, 1)
 
@@ -129,18 +144,18 @@ class Kde_model():
         # find local minima
         self.minima = s[argrelextrema(e, np.less)[0]]
 
-    def predict(self, data):
+    def predict(self, data: float) -> int:
         x = [i for i, m in enumerate(self.minima) if data < m]
         pred = min(x) if len(x) else len(self.minima)
         return pred
 
 
-def clustering_fit(dataset, key_lst):
+def clustering_fit(dataset: list, key_lst: List[str]) -> dict:
     """This function creates clustering models for each metadata type,
     using Kernel Density Estimation algorithm.
 
     Args:
-        datasets (list): data
+        dataset (list): data
         key_lst (list of str): names of metadata to cluster
 
     Returns:
@@ -162,12 +177,12 @@ def clustering_fit(dataset, key_lst):
     return model_dct
 
 
-def check_isMRIparam(mri_param_type, mri_param, subject, metadata):
+def check_isMRIparam(mri_param_type: str, mri_param: dict, subject: str, metadata: dict) -> bool:
     """Check if a given metadata belongs to the MRI parameters.
 
     Args:
         mri_param_type (str): Metadata type name.
-        mri_param (list): List of MRI params names.
+        mri_param (dict): List of MRI params names.
         subject (str): Current subject name.
         metadata (dict): Metadata.
 
@@ -191,7 +206,7 @@ def check_isMRIparam(mri_param_type, mri_param, subject, metadata):
         return True
 
 
-def get_film_metadata_models(ds_train, metadata_type, debugging=False):
+def get_film_metadata_models(ds_train: MRI2DSegmentationDataset, metadata_type: str, debugging: bool = False):
     """Get FiLM models.
 
     This function pulls the clustering and one-hot encoder models that are used by FiLMedUnet.
@@ -205,7 +220,7 @@ def get_film_metadata_models(ds_train, metadata_type, debugging=False):
     Returns:
         MRI2DSegmentationDataset, OneHotEncoder, KernelDensity: dataset, one-hot encoder and KDE model
     """
-    if metadata_type == "mri_params":
+    if metadata_type == MetadataKW.MRI_PARAMS:
         metadata_vector = ["RepetitionTime", "EchoTime", "FlipAngle"]
         metadata_clustering_models = clustering_fit(ds_train.metadata, metadata_vector)
     else:
@@ -220,7 +235,8 @@ def get_film_metadata_models(ds_train, metadata_type, debugging=False):
     return ds_train, train_onehotencoder, metadata_clustering_models
 
 
-def store_film_params(gammas, betas, metadata_values, metadata, model, film_layers, depth, film_metadata):
+def store_film_params(gammas: dict, betas: dict, metadata_values: list, metadata: list, model: nn.Module,
+                      film_layers: list, depth: int, film_metadata: str) -> (dict, dict, list):
     """Store FiLM params.
 
     Args:
@@ -234,7 +250,7 @@ def store_film_params(gammas, betas, metadata_values, metadata, model, film_laye
         film_metadata (str): Metadata of interest used to modulate the network (e.g., contrast, tumor_type).
 
     Returns:
-        dict, dict: gammas, betas
+        dict, dict, list: gammas, betas, metadata_values
     """
     new_input = [metadata[k][0][film_metadata] for k in range(len(metadata))]
     metadata_values.append(new_input)
@@ -254,7 +270,7 @@ def store_film_params(gammas, betas, metadata_values, metadata, model, film_laye
     return gammas, betas, metadata_values
 
 
-def save_film_params(gammas, betas, metadata_values, depth, ofolder):
+def save_film_params(gammas: dict, betas: dict, metadata_values: list, depth: int, ofolder: str) -> None:
     """Save FiLM params as npy files.
 
     These parameters can be further used for visualisation purposes. They are saved in the `ofolder` with `.npy` format.

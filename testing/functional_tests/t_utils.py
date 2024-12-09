@@ -1,12 +1,12 @@
-import os
 import pytest
 import shutil
+from pathlib import Path
 from ivadomed.utils import init_ivadomed
 from ivadomed import config_manager as imed_config_manager
 from testing.common_testing_util import remove_tmp_dir, path_repo_root, path_temp, path_data_functional_source, \
     path_data_functional_tmp, download_dataset
 
-__test_dir__ = os.path.join(path_repo_root, 'testing/functional_tests')
+__test_dir__ = Path(path_repo_root, 'testing/functional_tests')
 __data_testing_dir__ = path_data_functional_source
 __tmp_dir__ = path_temp
 
@@ -28,9 +28,9 @@ def check_sha256(file_config):
     initial_config = imed_config_manager.ConfigurationManager(file_config).get_config()
     result = []
     name = "config_file.json"
-    for root, dirs, files in os.walk(os.path.dirname(initial_config["path_output"])):
-        if name in files:
-            result.append(os.path.join(root, name))
+    for path_object in Path(initial_config["path_output"]).parent.glob("**/*"):
+        if path_object.is_file() and name in path_object.name:
+            result.append(str(path_object))
     assert result != []
     for generated_config in result:
         config = imed_config_manager.ConfigurationManager(generated_config).get_config()
@@ -51,7 +51,7 @@ def create_tmp_dir(copy_data_testing_dir=True):
             into the ``tmp`` folder.
     """
     remove_tmp_dir()
-    os.mkdir(path_temp)
-    if os.path.exists(path_data_functional_source) and copy_data_testing_dir:
+    Path(path_temp).mkdir(parents=True, exist_ok=True)
+    if Path(path_data_functional_source).exists() and copy_data_testing_dir:
         shutil.copytree(path_data_functional_source,
                         path_data_functional_tmp)

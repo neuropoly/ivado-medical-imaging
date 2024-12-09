@@ -10,25 +10,21 @@ on:
 jobs:
 
   pre-commit-checks:
-    strategy:
-      matrix:
-        os: [ "macos-latest", "windows-latest", "ubuntu-18.04", "ubuntu-20.04",  "macos-10.15"]
-        python-version: [3.6, 3.7, 3.8]
         
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
 
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
 
       - name: Cache pip dependencies
         id: cache-pip-dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           # Ubuntu-specific, see
           # https://github.com/actions/cache/blob/main/examples.md#python---pip
@@ -40,9 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
               python -m pip install --upgrade pip
-              if [[ -f requirements_dev.txt ]]; then pip install -r requirements_dev.txt; fi
-              pip install -e .
-              pre-commit install
+              pip install 'pre-commit>=2.10.1'
         shell: bash
 
       - name: Run pre-commit large file check

@@ -4,6 +4,13 @@
     "path_output": "classification_lesion_ax",
     "model_name": "label_lesion_t2_t2star",
     "debugging": false,
+    "wandb": {
+        "wandb_api_key": "",
+        "project_name": "my_project",
+        "group_name": "my_group",
+        "run_name": "run-1",
+        "log_grads_every": 100
+    },
     "loader_parameters": {
         "path_data": ["../duke/sct_testing/large/"],
         "target_suffix": ["_lesion-manual"],
@@ -87,8 +94,8 @@
     "transformation": {
         "Resample":
         {
-            "wspace": 0.75,
             "hspace": 0.75,
+            "wspace": 0.75,
             "dspace": 1,
             "applied_to": ["im", "roi"]
         },

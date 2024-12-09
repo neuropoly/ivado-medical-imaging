@@ -1,13 +1,25 @@
-# Common Requirements
--r requirements_common.txt
-
-# Find older pytorch pip wheel from PyTorch Org website
---find-links https://download.pytorch.org/whl/torch_stable.html
-
-# Torch CPU Version Windows/Linux
-torch==1.5.0+cpu; sys_platform != "darwin"
-torchvision==0.6.0+cpu; sys_platform != "darwin"
-
-# Torch CPU Version macOS (macOS has no CPU/GPU version separation)
-torch==1.5.0; sys_platform == "darwin"
-torchvision==0.6.0; sys_platform == "darwin"
+csv-diff>=1.0
+loguru~=0.5
+imageio>=2.31.4
+joblib~=1.0
+matplotlib>=3.3.0
+nibabel~=5.2
+# v1.16.2/v1.17.0 aren't built correctly for Windows:
+# https://github.com/onnx/onnx/issues/6267
+onnx<1.16.2
+# 1.7.0>onnxruntime>=1.5.1 required `brew install libomp` on macOS.
+# So, pin to >=1.7.0 to avoid having to ask users to install libomp.
+# Avoid version 1.16.0 due to: https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4225
+onnxruntime>=1.7.0,!=1.16.0
+pandas>=1.1
+pybids>=0.14.0,<0.15.6
+scikit-learn>=0.20.3
+scikit-image~=0.17
+seaborn~=0.11
+tensorboard>=1.15.0
+tqdm>=4.30
+scipy
+torchio>=0.18.68
+torch>=1.8.1
+torchvision>=0.9.1
+wandb>=0.12.11

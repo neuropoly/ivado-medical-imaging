@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from ivadomed import utils as imed_utils
 from scipy.stats import ttest_ind_from_stats
+from loguru import logger
 
 
 def get_parser():
@@ -59,10 +60,8 @@ def compute_statistics(dataframe, n_iterations, run_test=True, csv_out='comparis
     avg = dataframe.groupby(['path_output']).mean()
     std = dataframe.groupby(['path_output']).std()
 
-    print("Average dataframe")
-    print(avg)
-    print("Standard deviation dataframe")
-    print(std)
+    logger.info(f"Average dataframe: {avg}")
+    logger.info(f"Standard deviation dataframe: {std}")
 
     config_logs = list(avg.index.values)
     p_values = np.zeros((len(config_logs), len(config_logs)))
@@ -85,8 +84,8 @@ def compute_statistics(dataframe, n_iterations, run_test=True, csv_out='comparis
         i += 1
 
     p_df = pd.DataFrame(p_values, index=config_logs, columns=config_logs)
-    print("P-values dataframe")
-    print(p_df)
+    logger.info("P-values dataframe")
+    logger.info(p_df)
     if csv_out is not None:
         # Unnamed 0 column correspond to run number so we remoe that and add prefix for better readability
         df_concat = pd.concat([avg.add_prefix('avg_').drop(['avg_Unnamed: 0'], axis=1),

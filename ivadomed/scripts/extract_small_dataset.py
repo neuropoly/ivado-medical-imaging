@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-import os
 import shutil
 import argparse
 import numpy as np
 import pandas as pd
 from ivadomed import utils as imed_utils
+from pathlib import Path
+from typing import List
+from loguru import logger
 
 EXCLUDED_SUBJECT = ["sub-mniPilot1"]
 
@@ -42,11 +44,16 @@ def is_good_contrast(fname, good_contrast_list):
 
 
 def remove_some_contrasts(folder, subject_list, good_contrast_list):
-    file_list = [os.path.join(folder, s, "anat", f) for s in subject_list
-                 for f in os.listdir(os.path.join(folder, s, "anat"))]
-    rm_file_list = [f for f in file_list if not is_good_contrast(f, good_contrast_list)]
-    for ff in rm_file_list:
-        os.remove(ff)
+    file_list: List[Path] = []
+    for s in subject_list:
+        for f in Path(folder, s, "anat").iterdir():
+            file_list.append(f)
+    rm_file_list: List[Path] = []
+    for file in file_list:
+        if not is_good_contrast(str(file), good_contrast_list):
+            rm_file_list.append(file)
+    for file in rm_file_list:
+        file.unlink()
 
 
 def extract_small_dataset(input, output, n=10, contrast_list=None, include_derivatives=True,
@@ -71,21 +78,21 @@ def extract_small_dataset(input, output, n=10, contrast_list=None, include_deriv
             each function run is independent. Flag: ``--seed``, ``-s``.
     """
     # Create output folders
-    if not os.path.isdir(output):
-        os.makedirs(output)
+    if not Path(output).is_dir():
+        Path(output).mkdir(parents=True)
     if include_derivatives:
-        oderivatives = os.path.join(output, "derivatives")
-        if not os.path.isdir(oderivatives):
-            os.makedirs(oderivatives)
-        oderivatives = os.path.join(oderivatives, "labels")
-        if not os.path.isdir(oderivatives):
-            os.makedirs(oderivatives)
-        iderivatives = os.path.join(input, "derivatives", "labels")
+        out_derivatives = Path(output, "derivatives")
+        if not out_derivatives.is_dir():
+            out_derivatives.mkdir(parents=True)
+        out_derivatives = Path(out_derivatives, "labels")
+        if not out_derivatives.is_dir():
+            out_derivatives.mkdir(parents=True)
+        in_derivatives = Path(input, "derivatives", "labels")
 
     # Get subject list
-    subject_list = [s for s in os.listdir(input)
-                    if s.startswith("sub-") and os.path.isdir(os.path.join(input, s))
-                    and s not in EXCLUDED_SUBJECT]
+    subject_list = [s.name for s in Path(input).iterdir()
+                    if s.name.startswith("sub-") and s.is_dir()
+                    and s.name not in EXCLUDED_SUBJECT]
 
     # Randomly select subjects
     if seed != -1:
@@ -97,49 +104,49 @@ def extract_small_dataset(input, output, n=10, contrast_list=None, include_deriv
 
     # Loop across subjects
     for subject in subject_random_list:
-        print("\nSubject: {}".format(subject))
+        logger.debug(f"\nSubject: {subject}")
         # Copy images
-        isubjfolder = os.path.join(input, subject)
-        osubjfolder = os.path.join(output, subject)
-        assert os.path.isdir(isubjfolder)
-        print("\tCopying {} to {}.".format(isubjfolder, osubjfolder))
-        shutil.copytree(isubjfolder, osubjfolder)
+        in_subj_folder = Path(input, subject)
+        out_subj_folder = Path(output, subject)
+        assert in_subj_folder.is_dir()
+        logger.debug(f"\tCopying {in_subj_folder} to {out_subj_folder}.")
+        shutil.copytree(str(in_subj_folder), str(out_subj_folder))
         # Remove dwi data
-        if os.path.isdir(os.path.join(output, subject, "dwi")):
-            shutil.rmtree(os.path.join(output, subject, "dwi"))
+        if Path(output, subject, "dwi").is_dir():
+            shutil.rmtree(str(Path(output, subject, "dwi")))
         # Copy labels
         if include_derivatives:
-            isubjderivatives = os.path.join(iderivatives, subject)
-            osubjderivatives = os.path.join(oderivatives, subject)
-            assert os.path.isdir(isubjderivatives)
-            print("\tCopying {} to {}.".format(isubjderivatives, osubjderivatives))
-            shutil.copytree(isubjderivatives, osubjderivatives)
+            in_subj_derivatives = Path(in_derivatives, subject)
+            out_subj_derivatives = Path(out_derivatives, subject)
+            assert in_subj_derivatives.is_dir()
+            logger.debug(f"\tCopying {in_subj_derivatives} to {out_subj_derivatives}.")
+            shutil.copytree(str(in_subj_derivatives), str(out_subj_derivatives))
             # Remove dwi data
-            if os.path.isdir(os.path.join(osubjderivatives, subject, "dwi")):
-                shutil.rmtree(os.path.join(osubjderivatives, subject, "dwi"))
+            if Path(out_subj_derivatives, subject, "dwi").is_dir():
+                shutil.rmtree(str(Path(out_subj_derivatives, subject, "dwi")))
 
     if contrast_list:
         remove_some_contrasts(output, subject_random_list, contrast_list)
         if include_derivatives:
-            remove_some_contrasts(os.path.join(output, "derivatives", "labels"),
+            remove_some_contrasts(str(Path(output, "derivatives", "labels")),
                                   subject_random_list, contrast_list)
 
     # Copy dataset_description.json
-    idatasetjson = os.path.join(input, "dataset_description.json")
-    odatasetjson = os.path.join(output, "dataset_description.json")
-    shutil.copyfile(idatasetjson, odatasetjson)
+    in_dataset_json = Path(input, "dataset_description.json")
+    out_dataset_json = Path(output, "dataset_description.json")
+    shutil.copyfile(str(in_dataset_json), str(out_dataset_json))
     # Copy participants.json if it exist
-    if os.path.isfile(os.path.join(input, "participants.json")):
-        iparticipantsjson = os.path.join(input, "participants.json")
-        oparticipantsjson = os.path.join(output, "participants.json")
-        shutil.copyfile(iparticipantsjson, oparticipantsjson)
+    if Path(input).joinpath("participants.json").is_file():
+        in_participants_json = Path(input, "participants.json")
+        out_participants_json = Path(output, "participants.json")
+        shutil.copyfile(str(in_participants_json), str(out_participants_json))
     # Copy participants.tsv
-    iparticipantstsv = os.path.join(input, "participants.tsv")
-    oparticipantstsv = os.path.join(output, "participants.tsv")
-    df = pd.read_csv(iparticipantstsv, sep='\t')
+    in_participants_tsv = Path(input, "participants.tsv")
+    out_participants_tsv = Path(output, "participants.tsv")
+    df = pd.read_csv(str(in_participants_tsv), sep='\t')
     # Drop subjects
     df = df[df.participant_id.isin(subject_random_list)]
-    df.to_csv(oparticipantstsv, sep='\t', index=False)
+    df.to_csv(str(out_participants_tsv), sep='\t', index=False)
 
 
 def main(args=None):

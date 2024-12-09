@@ -57,6 +57,7 @@ Home
    tutorials/cascaded_architecture.rst
    tutorials/uncertainty.rst
    tutorials/automate_training.rst
+   tutorials/two_class_microscopy_seg_2d_unet.rst
 
 .. toctree::
    :maxdepth: 1

@@ -12,12 +12,9 @@ set -e
 
 # Retrieve input params
 SUBJECT=$1
-FILEPARAM=$2
-
-source $FILEPARAM
 
 # Create BIDS architecture
-ofolder_reg="${PATH_RESULTS}/${SUBJECT}/anat"
+ofolder_reg="${PATH_DATA_PROCESSED}/${SUBJECT}/anat"
 
 # Go to output anat folder, where most of the outputs will be located
 cd ${ofolder_reg}

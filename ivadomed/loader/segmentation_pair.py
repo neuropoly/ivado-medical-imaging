@@ -1,10 +1,17 @@
+from __future__ import annotations
 from pathlib import Path
 import imageio
 import nibabel as nib
 import numpy as np
 
 from ivadomed.loader import utils as imed_loader_utils
+from ivadomed.loader.sample_meta_data import SampleMetadata
 from ivadomed import postprocessing as imed_postpro
+from ivadomed.keywords import MetadataKW
+import typing
+if typing.TYPE_CHECKING:
+    from typing import List
+    import nibabel.nifti1
 
 
 class SegmentationPair(object):
@@ -34,8 +41,8 @@ class SegmentationPair(object):
         gt_handle (list): List of gt (ground truth) NifTI data as 'nibabel.nifti1.Nifti1Image' object
     """
 
-    def __init__(self, input_filenames, gt_filenames, metadata=None, slice_axis=2, cache=True, prepro_transforms=None,
-                 soft_gt=False):
+    def __init__(self, input_filenames: List[str], gt_filenames: List[str], metadata: list = None, slice_axis: int = 2,
+                 cache: bool = True, prepro_transforms: dict = None, soft_gt: bool = False) -> None:
 
         self.input_filenames = input_filenames
         self.gt_filenames = gt_filenames
@@ -94,11 +101,11 @@ class SegmentationPair(object):
         if self.metadata:
             self.metadata = []
             for data, input_filename in zip(metadata, input_filenames):
-                data["input_filenames"] = input_filename
-                data["gt_filenames"] = gt_filenames
+                data[MetadataKW.INPUT_FILENAMES] = input_filename
+                data[MetadataKW.GT_FILENAMES] = gt_filenames
                 self.metadata.append(data)
 
-    def get_pair_shapes(self):
+    def get_pair_shapes(self) -> (tuple, tuple):
         """Return the tuple (input, ground truth) representing both the input and ground truth shapes."""
         input_shape = []
         for handle in self.input_handle:
@@ -123,7 +130,7 @@ class SegmentationPair(object):
 
         return input_shape[0], gt_shape[0] if len(gt_shape) else None
 
-    def get_pair_data(self):
+    def get_pair_data(self) -> (list, list):
         """Return the tuple (input, ground truth) with the data content in numpy array."""
         cache_mode = 'fill' if self.cache else 'unchanged'
 
@@ -153,7 +160,7 @@ class SegmentationPair(object):
 
         return input_data, gt_data
 
-    def get_pair_metadata(self, slice_index=0, coord=None):
+    def get_pair_metadata(self, slice_index: int = 0, coord: tuple | list = None) -> dict:
         """Return dictionary containing input and gt metadata.
 
         Args:
@@ -167,24 +174,22 @@ class SegmentationPair(object):
         for idx_class, gt in enumerate(self.gt_handle):
             if gt is not None:
                 if not isinstance(gt, list):  # this tissue has annotation from only one rater
-                    gt_meta_dict.append(imed_loader_utils.SampleMetadata({
-                        "zooms": imed_loader_utils.orient_shapes_hwd(gt.header.get_zooms(), self.slice_axis),
-                        "data_shape": imed_loader_utils.orient_shapes_hwd(gt.header.get_data_shape(), self.slice_axis),
-                        "gt_filenames": self.metadata[0]["gt_filenames"],
-                        "bounding_box": self.metadata[0]["bounding_box"] if 'bounding_box' in self.metadata[
-                            0] else None,
-                        "data_type": 'gt',
-                        "crop_params": {}
+                    gt_meta_dict.append(SampleMetadata({
+                        MetadataKW.ZOOMS: imed_loader_utils.orient_shapes_hwd(gt.header.get_zooms(), self.slice_axis),
+                        MetadataKW.DATA_SHAPE: imed_loader_utils.orient_shapes_hwd(gt.header.get_data_shape(), self.slice_axis),
+                        MetadataKW.GT_FILENAMES: self.metadata[0].get(MetadataKW.GT_FILENAMES),
+                        MetadataKW.BOUNDING_BOX: self.metadata[0].get(MetadataKW.BOUNDING_BOX),
+                        MetadataKW.DATA_TYPE: 'gt',
+                        MetadataKW.CROP_PARAMS: {}
                     }))
                 else:
-                    gt_meta_dict.append([imed_loader_utils.SampleMetadata({
-                        "zooms": imed_loader_utils.orient_shapes_hwd(gt_rater.header.get_zooms(), self.slice_axis),
-                        "data_shape": imed_loader_utils.orient_shapes_hwd(gt_rater.header.get_data_shape(), self.slice_axis),
-                        "gt_filenames": self.metadata[0]["gt_filenames"][idx_class][idx_rater],
-                        "bounding_box": self.metadata[0]["bounding_box"] if 'bounding_box' in self.metadata[
-                            0] else None,
-                        "data_type": 'gt',
-                        "crop_params": {}
+                    gt_meta_dict.append([SampleMetadata({
+                        MetadataKW.ZOOMS: imed_loader_utils.orient_shapes_hwd(gt_rater.header.get_zooms(), self.slice_axis),
+                        MetadataKW.DATA_SHAPE: imed_loader_utils.orient_shapes_hwd(gt_rater.header.get_data_shape(), self.slice_axis),
+                        MetadataKW.GT_FILENAMES: self.metadata[0].get(MetadataKW.GT_FILENAMES)[idx_class][idx_rater],
+                        MetadataKW.BOUNDING_BOX: self.metadata[0].get(MetadataKW.BOUNDING_BOX),
+                        MetadataKW.DATA_TYPE: 'gt',
+                        MetadataKW.CROP_PARAMS: {}
                     }) for idx_rater, gt_rater in enumerate(gt)])
 
             else:
@@ -198,28 +203,28 @@ class SegmentationPair(object):
 
         input_meta_dict = []
         for handle in self.input_handle:
-            input_meta_dict.append(imed_loader_utils.SampleMetadata({
-                "zooms": imed_loader_utils.orient_shapes_hwd(handle.header.get_zooms(), self.slice_axis),
-                "data_shape": imed_loader_utils.orient_shapes_hwd(handle.header.get_data_shape(), self.slice_axis),
-                "data_type": 'im',
-                "crop_params": {}
+            input_meta_dict.append(SampleMetadata({
+                MetadataKW.ZOOMS: imed_loader_utils.orient_shapes_hwd(handle.header.get_zooms(), self.slice_axis),
+                MetadataKW.DATA_SHAPE: imed_loader_utils.orient_shapes_hwd(handle.header.get_data_shape(), self.slice_axis),
+                MetadataKW.DATA_TYPE: 'im',
+                MetadataKW.CROP_PARAMS: {}
             }))
 
         dreturn = {
-            "input_metadata": input_meta_dict,
-            "gt_metadata": gt_meta_dict,
+            MetadataKW.INPUT_METADATA: input_meta_dict,
+            MetadataKW.GT_METADATA: gt_meta_dict,
         }
 
         for idx, metadata in enumerate(self.metadata):  # loop across channels
-            metadata["slice_index"] = slice_index
-            metadata["coord"] = coord
+            metadata[MetadataKW.SLICE_INDEX] = slice_index
+            metadata[MetadataKW.COORD] = coord
             self.metadata[idx] = metadata
             for metadata_key in metadata.keys():  # loop across input metadata
-                dreturn["input_metadata"][idx][metadata_key] = metadata[metadata_key]
+                dreturn[MetadataKW.INPUT_METADATA][idx][metadata_key] = metadata[metadata_key]
 
         return dreturn
 
-    def get_pair_slice(self, slice_index, gt_type="segmentation"):
+    def get_pair_slice(self, slice_index: int, gt_type: str = "segmentation") -> dict:
         """Return the specified slice from (input, ground truth).
 
         Args:
@@ -262,13 +267,13 @@ class SegmentationPair(object):
         dreturn = {
             "input": input_slices,
             "gt": gt_slices,
-            "input_metadata": metadata["input_metadata"],
-            "gt_metadata": metadata["gt_metadata"],
+            MetadataKW.INPUT_METADATA: metadata.get(MetadataKW.INPUT_METADATA),
+            MetadataKW.GT_METADATA: metadata.get(MetadataKW.GT_METADATA),
         }
 
         return dreturn
 
-    def read_file(self, filename, is_gt=False):
+    def read_file(self, filename: str, is_gt: bool = False) -> nibabel.nifti1.Nifti1Image:
         """Read file according to file extension and returns 'nibabel.nifti1.Nifti1Image' object.
 
         Args:
@@ -281,7 +286,7 @@ class SegmentationPair(object):
         extension = imed_loader_utils.get_file_extension(filename)
         # TODO: remove "ome" from condition when implementing OMETIFF support (#739)
         if (not extension) or ("ome" in extension):
-            raise RuntimeError(f"The input file extension '{extension}' of '{Path(filename).stem}' is not "
+            raise RuntimeError(f"The input file extension '{extension}' of '{Path(filename).name}' is not "
                                f"supported. ivadomed supports the following "
                                f"file extensions: '.nii', '.nii.gz', '.png', '.tif', '.tiff', '.jpg' and '.jpeg'.")
 
@@ -292,21 +297,11 @@ class SegmentationPair(object):
             img = self.convert_file_to_nifti(filename, extension, is_gt)
         return img
 
-    def convert_file_to_nifti(self, filename, extension, is_gt=False):
+    def convert_file_to_nifti(self, filename: str, extension: str, is_gt: bool = False) -> nibabel.nifti1.Nifti1Image:
         """
         Convert a non-NifTI image into a 'nibabel.nifti1.Nifti1Image' object and save to a file.
         This method is especially relevant for making microscopy data compatible with NifTI-only
         pipelines.
-
-        The implementation of this method is dependent on the development of the corresponding
-        microscopy BEP (github.com/ivadomed/ivadomed/issues/301, bids.neuroimaging.io/bep031):
-        * "pixdim" (zooms) for Nifti1Image object is extracted as follows:
-            * For train, test and segment commands, PixelSize is taken from the metadata in BIDS JSON sidecar file.
-            * For inference with the segment_volume function, PixelSize must be provided in the 'options' argument.
-        * PixelSize definition in example dataset is a scalar in micrometers (BIDS BEP031 v0.0.2)
-        * PixelSize definition changed for list of 2-numbers [X, Y] or 3-numbers [X, Y, Z] in micrometers
-          for 2D and 3D respectively (BIDS BEP031 v0.0.3)
-        * Both PixelSize definitions are supported in this function.
 
         TODO: (#739) implement OMETIFF behavior (if "ome" in extension)
 
@@ -320,10 +315,55 @@ class SegmentationPair(object):
         """
         # For '.png', '.tif', '.tiff', '.jpg' and 'jpeg' extentions
         # Read image as 8 bit grayscale in numpy array (behavior TBD in ivadomed for RGB, RBGA or higher bit depth)
-        if "tif" in extension:
-            img = np.expand_dims(imageio.imread(filename, format='tiff-pil', as_gray=True), axis=-1).astype(np.uint8)
+        try: 
+            props = imageio.v3.improps(filename) # new in v3 - standardized metadata
+            _img = imageio.v3.imread(filename)
+        except:
+            # brute force fall back to support backward compatibility 
+            if '.tif' in extension:
+                img = np.expand_dims(
+                    imageio.v3.imread(filename, plugin='TIFF-PIL'),
+                    axis=-1).astype(np.unint8)
+                
+                if len(img.shape) > 3:
+                    img = np.expand_dims(
+                        imageio.v3.imread(filename, plugin='TIFF-PIL', as_gray=True),
+                        axis=-1).astype(np.unint8)
+            else:
+                # NOTE: The following yield same result but the first one is preferred
+                #       to support default backward compatibility:
+                # 1. _img = imageio.v3.imread(filename, plugin='PNG-PIL', as_gray=True)
+                # 2. _img = imageio.v3.imread(filename, plugin='PNG-PIL', pilmode='F')
+                # 3. _img = imageio.v3.imread(filename, plugin='pillow', pilmode='F')
+                
+                img = np.expand_dims(
+                    imageio.v3.imread(filename, plugin='PNG-PIL', as_gray=True),
+                    axis=-1).astype(np.unint8)
         else:
-            img = np.expand_dims(imageio.imread(filename, as_gray=True), axis=-1).astype(np.uint8)
+            # c.f for more details: https://github.com/ivadomed/ivadomed/pull/1297#discussion_r1267563980 and 
+            # https://github.com/ivadomed/ivadomed/pull/1297#discussion_r1267563980 
+            
+            # TIFF is a "wild" format. A few assumptions greatly simplify the code below:
+            # 1. the image is interleaved/channel-last (not planar)
+            # 2. the colorspace is one of: binary, gray, RGB, RGBA (not aliasing ones like YUV or CMYK)
+            # 3. the image is flat (not a volume or time-series)
+            # Note: All of these are trivially true for JPEG and PNG due to limitations of these formats.
+
+            # make grayscale (treats binary as 1-bit grayscale)
+            colorspace_idx = 2
+            if _img.ndim <= colorspace_idx:  # binary or gray
+                pass  # nothing to do
+            elif _img.shape[colorspace_idx] == 2:  # gray with alpha channel
+                _img = _img[:, :, 0]
+            elif _img.shape[colorspace_idx] == 3:  # RGB
+                _img = np.sum(_img * (.299, .587, .114), axis=-1)
+            else:  # RGBA
+                # discards alpha
+                _img = np.sum(_img * (.299, .587, .114, 0), axis=-1)
+            if len(_img.shape) < 3:
+                _img = np.expand_dims(_img, axis=-1)
+
+            img = imageio.core.image_as_uint(_img, bitdepth=8)
 
         # Binarize ground-truth values (0-255) to 0 and 1 in uint8 with threshold 0.5
         if is_gt:
@@ -332,29 +372,12 @@ class SegmentationPair(object):
         # Convert numpy array to Nifti1Image object with 4x4 identity affine matrix
         img = nib.Nifti1Image(img, affine=np.eye(4))
 
-        # Get pixel size in um from json metadata and convert to mm
-        array_length = [2, 3]        # Accepted array length for 'PixelSize' metadata
-        conversion_factor = 0.001    # Conversion factor from um to mm
-        if 'PixelSize' in self.metadata[0]:
-            ps_in_um = self.metadata[0]['PixelSize']
-            if isinstance(ps_in_um, list) and (len(ps_in_um) in array_length):
-                ps_in_um = np.asarray(ps_in_um)
-            elif isinstance(ps_in_um, float):
-                ps_in_um = np.asarray([ps_in_um, ps_in_um])
-            else:
-                raise RuntimeError("'PixelSize' metadata type is not supported. Format must be 2D [X, Y] array,"
-                                   " 3D [X, Y, Z] array or float.")
-            # Note: pixdim[1,2,3] must be non-zero in Nifti objects even if there is only one slice.
-            # When ps_in_um[2] (pixdim[3]) is not present or 0, we assign the same PixelSize as ps_in_um[0] (pixdim[1])
-            ps_in_um = np.resize(ps_in_um, 3)
-            if ps_in_um[2] == 0:
-                ps_in_um[2] = ps_in_um[0]
-            ps_in_mm = tuple(ps_in_um * conversion_factor)
-        else:
-            raise RuntimeError("'PixelSize' is missing from metadata")
+        # Get PixelSize in millimeters in order (PixelSizeY, PixelSizeX, PixelSizeZ), where X is the width,
+        # Y the height and Z the depth of the image.
+        ps_in_mm = self.get_microscopy_pixelsize(filename)
 
         # Set "pixdim" (zooms) in Nifti1Image object header
-        img.header.set_zooms((ps_in_mm))
+        img.header.set_zooms(ps_in_mm)
 
         # If it doesn't already exist, save NifTI file in path_data alongside PNG/TIF/JPG file
         fname_out = imed_loader_utils.update_filename_to_nifti(filename)
@@ -362,3 +385,69 @@ class SegmentationPair(object):
             nib.save(img, fname_out)
 
         return img
+
+
+    def get_microscopy_pixelsize(self, filename: str) -> tuple:
+        """
+        Get the microscopy pixel size from the metadata and convert to millimeters.
+
+        The implementation of this method is compliant with BIDS version 1.7.0:
+        * "pixdim" (zooms) for Nifti1Image object is extracted as follows:
+            * For train, test and segment commands, PixelSize is taken from the metadata in BIDS JSON sidecar file.
+            * For inference with the segment_volume function, PixelSize and PixelSizeUnits must be provided in the
+              'options' argument.
+        * The function supports the PixelSize definition of BIDS 1.7.0 as a list of 2-numbers
+          [PixelSizeX, PixelSizeY] or 3-numbers [PixelSizeX, PixelSizeY, PixelSizeZ] for 2D and 3D
+          respectively, where X is the width, Y the height and Z the depth of the image.
+        * The function supports the PixelSizeUnits definition of BIDS 1.7.0 as "mm", "um" or "nm".
+
+        Returns:
+            ndrray: Pixel size in millimeters (ps_in_mm) in order (PixelSizeY, PixelSizeX, PixelSizeZ),
+            where Y is the height, X the width and Z the depth of the image.
+        """
+
+        # Get pixel size units from json metadata and set conversion factor from pixel size units to mm
+        if MetadataKW.PIXEL_SIZE_UNITS in self.metadata[0]:
+            pixel_size_units = self.metadata[0][MetadataKW.PIXEL_SIZE_UNITS]
+            if pixel_size_units == "mm":
+                conversion_factor = 1          # Conversion factor from mm to mm
+            elif pixel_size_units == "um":
+                conversion_factor = 0.001      # Conversion factor from um to mm
+            elif pixel_size_units == "nm":
+                conversion_factor = 0.000001   # Conversion factor from nm to mm
+            else:
+                raise RuntimeError(f"The PixelSizeUnits '{pixel_size_units}' of '{Path(filename).stem}' is not "
+                                   f"supported. ivadomed supports the following PixelSizeUnits: 'mm', 'um' and 'nm'.")
+        else:
+            raise RuntimeError("'PixelSizeUnits' is missing from metadata")
+
+        # Set accepted array length for 'PixelSize' metadata
+        array_length = [2, 3]
+
+        # Get pixel size from json metadata and convert to mm
+        if MetadataKW.PIXEL_SIZE in self.metadata[0]:
+            pixel_size = self.metadata[0][MetadataKW.PIXEL_SIZE]
+
+            if len(pixel_size) in array_length:
+                # PixelSize array in order [PixelSizeX, PixelSizeY] or [PixelSizeX, PixelSizeY, PixelSizeZ]
+                pixel_size = np.asarray(pixel_size)
+
+                # Note: pixdim[3] (PixelSizeZ) must be non-zero in Nifti objects even if there is only one slice.
+                # When PixelSizeZ is not present or 0, we assign the same PixelSize as PixelSizeX
+                pixel_size = np.resize(pixel_size, 3)
+                if pixel_size[2] == 0:
+                    pixel_size[2] = pixel_size[0]
+
+                # Swap PixelSizeX and PixelSizeY resulting in an array in order [PixelSizeY, PixelSizeX, PixelSizeZ]
+                # to match NIfTI pixdim[1,2,3] in [Height, Width, Depth] orientation with axial slice axis.
+                pixel_size[[1, 0]] = pixel_size[[0, 1]]
+
+            else:
+                raise RuntimeError("'PixelSize' metadata type is not supported. Format must be a 2D"
+                                   " [PixelSizeX, PixelSizeY] array or 3D [PixelSizeX, PixelSizeY, PixelSizeZ] array"
+                                   " where X is the width, Y the height and Z the depth of the image.")
+            ps_in_mm = tuple(pixel_size * conversion_factor)
+        else:
+            raise RuntimeError("'PixelSize' is missing from metadata")
+
+        return ps_in_mm

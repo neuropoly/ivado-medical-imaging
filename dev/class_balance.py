@@ -11,18 +11,20 @@
 #
 ##############################################################
 
-import json
 import argparse
 import numpy as np
 
 from ivadomed.loader.bids_dataset import BidsDataset
 from ivadomed import config_manager as imed_config_manager
 from ivadomed.loader import utils as imed_loader_utils
-from ivadomed import utils as imed_utils
+from ivadomed.loader.slice_filter import SliceFilter
 from ivadomed import transforms as imed_transforms
+from ivadomed import utils as imed_utils
 
 from torchvision import transforms as torch_transforms
 from torch.utils.data import DataLoader
+
+from loguru import logger
 
 
 def get_parser():
@@ -30,12 +32,6 @@ def get_parser():
     parser.add_argument("-c", help="Config file path.")
 
     return parser
-
-
-def print_stats(arr):
-    print('\tMean: {} %'.format(np.mean(arr)))
-    print('\tMedian: {} %'.format(np.median(arr)))
-    print('\tInter-quartile range: [{}, {}] %'.format(np.percentile(arr, 25), np.percentile(arr, 75)))
 
 
 def run_main(args):
@@ -55,7 +51,7 @@ def run_main(args):
 
     balance_dct = {}
     for ds_lst, ds_name in zip([train_lst, valid_lst, test_lst], ['train', 'valid', 'test']):
-        print("\nLoading {} set.\n".format(ds_name))
+        logger.info(f"\nLoading {ds_name} set.\n")
         ds = BidsDataset(context["path_data"],
                          subject_lst=ds_lst,
                          target_suffix=context["target_suffix"],
@@ -64,9 +60,9 @@ def run_main(args):
                          metadata_choice=context["metadata"],
                          contrast_balance=context["contrast_balance"],
                          transform=transform_lst,
-                         slice_filter_fn=imed_loader_utils.SliceFilter())
+                         slice_filter_fn=SliceFilter())
 
-        print("Loaded {} axial slices for the {} set.".format(len(ds), ds_name))
+        logger.info(f"Loaded {len(ds)} axial slices for the {ds_name} set.")
         ds_loader = DataLoader(ds, batch_size=1,
                                shuffle=False, pin_memory=False,
                                collate_fn=imed_loader_utils.imed_collate,
@@ -82,11 +78,11 @@ def run_main(args):
         balance_dct[ds_name] = balance_lst
 
     for ds_name in balance_dct:
-        print('\nClass balance in {} set:'.format(ds_name))
-        print_stats(balance_dct[ds_name])
+        logger.info(f"\nClass balance in {ds_name} set:")
+        imed_utils.print_stats(balance_dct[ds_name])
 
-    print('\nClass balance in full set:')
-    print_stats([e for d in balance_dct for e in balance_dct[d]])
+    logger.info("\nClass balance in full set:")
+    imed_utils.print_stats([e for d in balance_dct for e in balance_dct[d]])
 
 
 if __name__ == '__main__':
