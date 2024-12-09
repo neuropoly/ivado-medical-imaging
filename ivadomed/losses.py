@@ -50,17 +50,21 @@ class DiceLoss(nn.Module):
 
     Attributes:
         smooth (float): Value to avoid division by zero when images and predictions are empty.
+        sample_wise (bool): If set, dice loss is averaged over sample instead of over batch
     """
-    def __init__(self, smooth=1.0):
+    def __init__(self, smooth=1.0, sample_wise=False):
         super(DiceLoss, self).__init__()
         self.smooth = smooth
+        self.sample_wise = sample_wise
 
     def forward(self, prediction, target):
-        iflat = prediction.reshape(-1)
-        tflat = target.reshape(-1)
-        intersection = (iflat * tflat).sum()
+        if not self.sample_wise:
+            prediction, target = prediction.unsqueeze(dim=0), target.unsqueeze(dim=0)
+        iflat = prediction.reshape(prediction.shape[0], -1)
+        tflat = target.reshape(target.shape[0], -1)
+        intersection = (iflat * tflat).sum(dim = 1)
 
-        return - (2.0 * intersection + self.smooth) / (iflat.sum() + tflat.sum() + self.smooth)
+        return - ((2.0 * intersection + self.smooth) / (iflat.sum(dim = 1) + tflat.sum(dim = 1) + self.smooth)).mean()
 
 
 class BinaryCrossEntropyLoss(nn.Module):
